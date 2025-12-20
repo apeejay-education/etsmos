@@ -1,0 +1,5 @@
+name,description,product_type,lifecycle_stage,strategic_priority,business_owner,tech_owner
+Digital Onboarding,Customer onboarding automation platform,external,live,high,John Smith,Jane Doe
+Internal Analytics,Business intelligence dashboard,internal,build,medium,Alice Johnson,Bob Wilson
+Client Portal,Self-service client management,client,ideation,high,Sarah Brown,Mike Davis
+R&D Sandbox,Experimental features testing,rnd,maintenance,low,Tom Harris,Emily Clark
