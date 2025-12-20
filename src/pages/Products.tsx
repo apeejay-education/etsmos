@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from '@/hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter } from 'lucide-react';
 import { ProductDialog } from '@/components/products/ProductDialog';
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
+import { SearchFilter } from '@/components/filters/SearchFilter';
+import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +20,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const sortOptions: SortOption[] = [
+  { label: 'Name', value: 'name' },
+  { label: 'Priority', value: 'strategic_priority' },
+  { label: 'Lifecycle', value: 'lifecycle_stage' },
+  { label: 'Created', value: 'created_at' },
+];
 
 export default function Products() {
   const { data: products, isLoading } = useProducts();
@@ -29,6 +45,11 @@ export default function Products() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [lifecycleFilter, setLifecycleFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const handleCreate = (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     createProduct.mutate(data, {
@@ -52,6 +73,55 @@ export default function Products() {
       onSuccess: () => setDeleteId(null)
     });
   };
+
+  const handleSort = (field: string, direction: SortDirection) => {
+    setSortBy(direction ? field : null);
+    setSortDirection(direction);
+  };
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    
+    let result = products.filter((p) => {
+      if (lifecycleFilter !== 'all' && p.lifecycle_stage !== lifecycleFilter) return false;
+      if (priorityFilter !== 'all' && p.strategic_priority !== priorityFilter) return false;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        if (
+          !p.name.toLowerCase().includes(searchLower) &&
+          !(p.description || '').toLowerCase().includes(searchLower) &&
+          !(p.business_owner || '').toLowerCase().includes(searchLower) &&
+          !(p.tech_owner || '').toLowerCase().includes(searchLower)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (sortBy && sortDirection) {
+      const priorityOrder: Record<string, number> = { high: 1, medium: 2, low: 3 };
+      result = [...result].sort((a, b) => {
+        let aVal: string | number = a[sortBy as keyof typeof a] as string;
+        let bVal: string | number = b[sortBy as keyof typeof b] as string;
+        
+        if (sortBy === 'strategic_priority') {
+          aVal = priorityOrder[a.strategic_priority];
+          bVal = priorityOrder[b.strategic_priority];
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDirection === 'asc' 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [products, search, lifecycleFilter, priorityFilter, sortBy, sortDirection]);
 
   const lifecycleColors: Record<ProductLifecycle, string> = {
     ideation: 'bg-purple-100 text-purple-800',
@@ -108,11 +178,55 @@ export default function Products() {
           )}
         </div>
 
-        {products?.length === 0 ? (
+        <div className="flex flex-wrap gap-4 items-center">
+          <SearchFilter
+            value={search}
+            onChange={setSearch}
+            placeholder="Search products..."
+          />
+          <div className="flex gap-2 items-center">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={lifecycleFilter} onValueChange={setLifecycleFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Lifecycle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stages</SelectItem>
+                <SelectItem value="ideation">Ideation</SelectItem>
+                <SelectItem value="build">Build</SelectItem>
+                <SelectItem value="live">Live</SelectItem>
+                <SelectItem value="scale">Scale</SelectItem>
+                <SelectItem value="maintenance">Maintenance</SelectItem>
+                <SelectItem value="sunset">Sunset</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <SortButton
+              options={sortOptions}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
+          </div>
+        </div>
+
+        {filteredProducts.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">No products yet</p>
-              {canEdit && (
+              <p className="text-muted-foreground mb-4">
+                {products?.length === 0 ? 'No products yet' : 'No products match your filters'}
+              </p>
+              {canEdit && products?.length === 0 && (
                 <Button onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Product
@@ -122,7 +236,7 @@ export default function Products() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {products?.map((product) => (
+            {filteredProducts.map((product) => (
               <Card key={product.id} className={!product.is_active ? 'opacity-60' : ''}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">

@@ -7,7 +7,8 @@ import {
   Settings,
   LogOut,
   Calendar,
-  Users
+  Users,
+  ClipboardList
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Execution Signals', href: '/signals', icon: Activity },
   { name: 'Monthly Snapshots', href: '/snapshots', icon: Calendar },
   { name: 'People', href: '/people', icon: Users },
+  { name: 'Audit Trail', href: '/audit', icon: ClipboardList },
 ];
 
 const adminNavigation = [
