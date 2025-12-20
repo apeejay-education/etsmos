@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -32,6 +32,12 @@ const adminNavigation = [
 export function AppSidebar() {
   const { user, userRole, signOut, isAdmin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-sidebar">
@@ -100,7 +106,7 @@ export function AppSidebar() {
         <Button 
           variant="ghost" 
           className="w-full justify-start gap-3 text-sidebar-foreground"
-          onClick={signOut}
+          onClick={handleSignOut}
         >
           <LogOut className="h-4 w-4" />
           Sign Out
