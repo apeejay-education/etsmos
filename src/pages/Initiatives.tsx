@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useInitiatives, useCreateInitiative, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, Filter } from 'lucide-react';
 import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
+import { SearchFilter } from '@/components/filters/SearchFilter';
+import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +30,13 @@ import {
 } from '@/components/ui/select';
 import { differenceInDays } from 'date-fns';
 
+const sortOptions: SortOption[] = [
+  { label: 'Title', value: 'title' },
+  { label: 'Priority', value: 'priority_level' },
+  { label: 'Status', value: 'status' },
+  { label: 'Created', value: 'created_at' },
+];
+
 export default function Initiatives() {
   const { data: initiatives, isLoading } = useInitiatives();
   const { data: products } = useProducts();
@@ -39,8 +48,11 @@ export default function Initiatives() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
   const handleCreate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
     createInitiative.mutate(data, {
@@ -85,11 +97,54 @@ export default function Initiatives() {
     routine: 'bg-gray-100 text-gray-800'
   };
 
-  const filteredInitiatives = initiatives?.filter(i => {
-    if (statusFilter !== 'all' && i.status !== statusFilter) return false;
-    if (priorityFilter !== 'all' && i.priority_level !== priorityFilter) return false;
-    return true;
-  });
+  const handleSort = (field: string, direction: SortDirection) => {
+    setSortBy(direction ? field : null);
+    setSortDirection(direction);
+  };
+
+  const filteredInitiatives = useMemo(() => {
+    if (!initiatives) return [];
+    
+    let result = initiatives.filter((i) => {
+      if (statusFilter !== 'all' && i.status !== statusFilter) return false;
+      if (priorityFilter !== 'all' && i.priority_level !== priorityFilter) return false;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        if (
+          !i.title.toLowerCase().includes(searchLower) &&
+          !(i.context || '').toLowerCase().includes(searchLower) &&
+          !(i.accountable_owner || '').toLowerCase().includes(searchLower) &&
+          !(i.products?.name || '').toLowerCase().includes(searchLower)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (sortBy && sortDirection) {
+      const priorityOrder: Record<string, number> = { high: 1, medium: 2, low: 3 };
+      result = [...result].sort((a, b) => {
+        if (sortBy === 'priority_level') {
+          const aVal = priorityOrder[a.priority_level];
+          const bVal = priorityOrder[b.priority_level];
+          return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+        }
+        
+        const aVal = a[sortBy as keyof typeof a] as string;
+        const bVal = b[sortBy as keyof typeof b] as string;
+        
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return sortDirection === 'asc' 
+            ? aVal.localeCompare(bVal)
+            : bVal.localeCompare(aVal);
+        }
+        return 0;
+      });
+    }
+
+    return result;
+  }, [initiatives, search, statusFilter, priorityFilter, sortBy, sortDirection]);
 
   if (isLoading) {
     return (
@@ -127,32 +182,45 @@ export default function Initiatives() {
           )}
         </div>
 
-        <div className="flex gap-4 items-center">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="blocked">Blocked</SelectItem>
-              <SelectItem value="delivered">Delivered</SelectItem>
-              <SelectItem value="dropped">Dropped</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priorities</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap gap-4 items-center">
+          <SearchFilter
+            value={search}
+            onChange={setSearch}
+            placeholder="Search initiatives..."
+          />
+          <div className="flex gap-2 items-center">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="blocked">Blocked</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="dropped">Dropped</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <SortButton
+              options={sortOptions}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSort={handleSort}
+            />
+          </div>
         </div>
 
         {!products?.length ? (
@@ -163,11 +231,13 @@ export default function Initiatives() {
               </p>
             </CardContent>
           </Card>
-        ) : filteredInitiatives?.length === 0 ? (
+        ) : filteredInitiatives.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">No initiatives found</p>
-              {canEdit && (
+              <p className="text-muted-foreground mb-4">
+                {initiatives?.length === 0 ? 'No initiatives found' : 'No initiatives match your filters'}
+              </p>
+              {canEdit && initiatives?.length === 0 && (
                 <Button onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Initiative
@@ -177,7 +247,7 @@ export default function Initiatives() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredInitiatives?.map((initiative) => {
+            {filteredInitiatives.map((initiative) => {
               const aging = differenceInDays(
                 new Date(), 
                 new Date(initiative.approval_date || initiative.created_at)

@@ -13,6 +13,7 @@ import Signals from "./pages/Signals";
 import Settings from "./pages/Settings";
 import MonthlySnapshots from "./pages/MonthlySnapshots";
 import People from "./pages/People";
+import AuditTrail from "./pages/AuditTrail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
             <Route path="/snapshots" element={<ProtectedRoute><MonthlySnapshots /></ProtectedRoute>} />
             <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute><AuditTrail /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
