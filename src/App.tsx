@@ -11,6 +11,8 @@ import Products from "./pages/Products";
 import Initiatives from "./pages/Initiatives";
 import Signals from "./pages/Signals";
 import Settings from "./pages/Settings";
+import MonthlySnapshots from "./pages/MonthlySnapshots";
+import People from "./pages/People";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +30,8 @@ const App = () => (
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/initiatives" element={<ProtectedRoute><Initiatives /></ProtectedRoute>} />
             <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
+            <Route path="/snapshots" element={<ProtectedRoute><MonthlySnapshots /></ProtectedRoute>} />
+            <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute requiredRole="admin"><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
