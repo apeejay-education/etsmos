@@ -174,6 +174,9 @@ export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange
                           {initiative.products?.name}
                         </p>
                         <div className="flex flex-wrap gap-1">
+                          <Badge className={`${statusColors[initiative.status]} text-xs`}>
+                            {initiative.status.replace('_', ' ')}
+                          </Badge>
                           <Badge className={`${priorityColors[initiative.priority_level]} text-xs`}>
                             {initiative.priority_level}
                           </Badge>
