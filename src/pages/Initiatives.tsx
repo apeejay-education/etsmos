@@ -100,6 +100,10 @@ export default function Initiatives() {
     });
   };
 
+  const handleStatusChange = (id: string, newStatus: InitiativeStatus) => {
+    updateInitiative.mutate({ id, status: newStatus });
+  };
+
   const statusColors: Record<InitiativeStatus, string> = {
     approved: 'bg-blue-100 text-blue-800',
     in_progress: 'bg-yellow-100 text-yellow-800',
@@ -331,6 +335,7 @@ export default function Initiatives() {
             initiatives={filteredInitiatives}
             onEdit={(initiative) => { setEditingInitiative(initiative); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
+            onStatusChange={handleStatusChange}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />
