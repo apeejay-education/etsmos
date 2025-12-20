@@ -1,0 +1,284 @@
+import { useState } from 'react';
+import { useInitiatives, useCreateInitiative, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
+import { useProducts } from '@/hooks/useProducts';
+import { useAuth } from '@/contexts/AuthContext';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Pencil, Trash2, Filter } from 'lucide-react';
+import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
+import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { differenceInDays } from 'date-fns';
+
+export default function Initiatives() {
+  const { data: initiatives, isLoading } = useInitiatives();
+  const { data: products } = useProducts();
+  const { canEdit, isAdmin } = useAuth();
+  const createInitiative = useCreateInitiative();
+  const updateInitiative = useUpdateInitiative();
+  const deleteInitiative = useDeleteInitiative();
+  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+
+  const handleCreate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
+    createInitiative.mutate(data, {
+      onSuccess: () => setDialogOpen(false)
+    });
+  };
+
+  const handleUpdate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
+    if (!editingInitiative) return;
+    updateInitiative.mutate({ id: editingInitiative.id, ...data }, {
+      onSuccess: () => {
+        setEditingInitiative(null);
+        setDialogOpen(false);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    if (!deleteId) return;
+    deleteInitiative.mutate(deleteId, {
+      onSuccess: () => setDeleteId(null)
+    });
+  };
+
+  const statusColors: Record<InitiativeStatus, string> = {
+    approved: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    blocked: 'bg-red-100 text-red-800',
+    delivered: 'bg-green-100 text-green-800',
+    dropped: 'bg-gray-100 text-gray-800'
+  };
+
+  const priorityColors: Record<PriorityLevel, string> = {
+    high: 'bg-red-100 text-red-800',
+    medium: 'bg-yellow-100 text-yellow-800',
+    low: 'bg-gray-100 text-gray-800'
+  };
+
+  const sensitivityColors: Record<SensitivityLevel, string> = {
+    confidential: 'bg-purple-100 text-purple-800',
+    internal: 'bg-blue-100 text-blue-800',
+    routine: 'bg-gray-100 text-gray-800'
+  };
+
+  const filteredInitiatives = initiatives?.filter(i => {
+    if (statusFilter !== 'all' && i.status !== statusFilter) return false;
+    if (priorityFilter !== 'all' && i.priority_level !== priorityFilter) return false;
+    return true;
+  });
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-64" />
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-32 bg-muted rounded" />
+            ))}
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Initiatives</h1>
+            <p className="text-muted-foreground">
+              Track approved work and decisions
+            </p>
+          </div>
+          {canEdit && (
+            <Button 
+              onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
+              disabled={!products?.length}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Initiative
+            </Button>
+          )}
+        </div>
+
+        <div className="flex gap-4 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="blocked">Blocked</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
+              <SelectItem value="dropped">Dropped</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priorities</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {!products?.length ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground">
+                Create a product first before adding initiatives
+              </p>
+            </CardContent>
+          </Card>
+        ) : filteredInitiatives?.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <p className="text-muted-foreground mb-4">No initiatives found</p>
+              {canEdit && (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Initiative
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {filteredInitiatives?.map((initiative) => {
+              const aging = differenceInDays(
+                new Date(), 
+                new Date(initiative.approval_date || initiative.created_at)
+              );
+              
+              return (
+                <Card key={initiative.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-lg">{initiative.title}</h3>
+                          {aging > 14 && initiative.status !== 'delivered' && initiative.status !== 'dropped' && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-600">
+                              {aging} days
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {initiative.products?.name}
+                        </p>
+                        {initiative.context && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {initiative.context}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <Badge className={statusColors[initiative.status]}>
+                            {initiative.status.replace('_', ' ')}
+                          </Badge>
+                          <Badge className={priorityColors[initiative.priority_level]}>
+                            {initiative.priority_level}
+                          </Badge>
+                          <Badge className={sensitivityColors[initiative.sensitivity_level]}>
+                            {initiative.sensitivity_level}
+                          </Badge>
+                          {initiative.approval_source && (
+                            <Badge variant="outline">
+                              {initiative.approval_source}
+                            </Badge>
+                          )}
+                        </div>
+                        {initiative.accountable_owner && (
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Owner: {initiative.accountable_owner}
+                          </p>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <div className="flex gap-1 ml-4">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => { setEditingInitiative(initiative); setDialogOpen(true); }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => setDeleteId(initiative.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        <InitiativeDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          initiative={editingInitiative}
+          products={products || []}
+          onSubmit={editingInitiative ? handleUpdate : handleCreate}
+          isLoading={createInitiative.isPending || updateInitiative.isPending}
+        />
+
+        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Initiative?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the initiative
+                and any associated execution signals.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </AppLayout>
+  );
+}

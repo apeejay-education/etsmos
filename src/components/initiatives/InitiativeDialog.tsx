@@ -1,0 +1,592 @@
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Initiative, Product } from '@/types/database';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+const initiativeSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(200),
+  context: z.string().max(2000).nullable(),
+  expected_outcome: z.string().max(1000).nullable(),
+  product_id: z.string().uuid('Please select a product'),
+  approval_source: z.enum(['board', 'chairman', 'management', 'internal'] as const),
+  approving_authority: z.string().max(100).nullable(),
+  approval_date: z.string().nullable(),
+  approval_evidence: z.string().max(500).nullable(),
+  strategic_category: z.enum(['revenue', 'compliance', 'operations', 'quality', 'brand'] as const).nullable(),
+  sensitivity_level: z.enum(['confidential', 'internal', 'routine'] as const),
+  priority_level: z.enum(['high', 'medium', 'low'] as const),
+  accountable_owner: z.string().max(100).nullable(),
+  escalation_owner: z.string().max(100).nullable(),
+  status: z.enum(['approved', 'in_progress', 'blocked', 'delivered', 'dropped'] as const),
+  target_delivery_window: z.enum(['immediate', 'month', 'quarter', 'flexible'] as const),
+  actual_delivery_date: z.string().nullable(),
+  delivered_outcome_summary: z.string().max(2000).nullable(),
+  outcome_vs_intent: z.enum(['fully', 'partial', 'missed'] as const).nullable(),
+  closure_notes: z.string().max(2000).nullable()
+});
+
+type InitiativeFormData = z.infer<typeof initiativeSchema>;
+
+interface InitiativeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  initiative: Initiative | null;
+  products: Product[];
+  onSubmit: (data: InitiativeFormData) => void;
+  isLoading: boolean;
+}
+
+export function InitiativeDialog({ 
+  open, 
+  onOpenChange, 
+  initiative, 
+  products,
+  onSubmit, 
+  isLoading 
+}: InitiativeDialogProps) {
+  const form = useForm<InitiativeFormData>({
+    resolver: zodResolver(initiativeSchema),
+    defaultValues: {
+      title: '',
+      context: null,
+      expected_outcome: null,
+      product_id: '',
+      approval_source: 'internal',
+      approving_authority: null,
+      approval_date: null,
+      approval_evidence: null,
+      strategic_category: null,
+      sensitivity_level: 'routine',
+      priority_level: 'medium',
+      accountable_owner: null,
+      escalation_owner: null,
+      status: 'approved',
+      target_delivery_window: 'flexible',
+      actual_delivery_date: null,
+      delivered_outcome_summary: null,
+      outcome_vs_intent: null,
+      closure_notes: null
+    }
+  });
+
+  useEffect(() => {
+    if (initiative) {
+      form.reset({
+        title: initiative.title,
+        context: initiative.context,
+        expected_outcome: initiative.expected_outcome,
+        product_id: initiative.product_id,
+        approval_source: initiative.approval_source,
+        approving_authority: initiative.approving_authority,
+        approval_date: initiative.approval_date,
+        approval_evidence: initiative.approval_evidence,
+        strategic_category: initiative.strategic_category,
+        sensitivity_level: initiative.sensitivity_level,
+        priority_level: initiative.priority_level,
+        accountable_owner: initiative.accountable_owner,
+        escalation_owner: initiative.escalation_owner,
+        status: initiative.status,
+        target_delivery_window: initiative.target_delivery_window,
+        actual_delivery_date: initiative.actual_delivery_date,
+        delivered_outcome_summary: initiative.delivered_outcome_summary,
+        outcome_vs_intent: initiative.outcome_vs_intent,
+        closure_notes: initiative.closure_notes
+      });
+    } else {
+      form.reset({
+        title: '',
+        context: null,
+        expected_outcome: null,
+        product_id: products[0]?.id || '',
+        approval_source: 'internal',
+        approving_authority: null,
+        approval_date: null,
+        approval_evidence: null,
+        strategic_category: null,
+        sensitivity_level: 'routine',
+        priority_level: 'medium',
+        accountable_owner: null,
+        escalation_owner: null,
+        status: 'approved',
+        target_delivery_window: 'flexible',
+        actual_delivery_date: null,
+        delivered_outcome_summary: null,
+        outcome_vs_intent: null,
+        closure_notes: null
+      });
+    }
+  }, [initiative, form, products]);
+
+  const handleSubmit = (data: InitiativeFormData) => {
+    onSubmit(data);
+  };
+
+  const status = form.watch('status');
+  const isDelivered = status === 'delivered';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{initiative ? 'Edit Initiative' : 'Create Initiative'}</DialogTitle>
+          <DialogDescription>
+            {initiative ? 'Update initiative details' : 'Add a new approved initiative'}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <Tabs defaultValue="core" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="core">Core</TabsTrigger>
+                <TabsTrigger value="approval">Approval</TabsTrigger>
+                <TabsTrigger value="delivery">Delivery</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="core" className="space-y-4 mt-4">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Title</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Executive-readable title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="product_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Product</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {products.map(p => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="context"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Context (Why this exists)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Background and rationale..."
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="expected_outcome"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Outcome</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Business outcome, not tasks..."
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="priority_level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="sensitivity_level"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sensitivity</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="confidential">Confidential</SelectItem>
+                            <SelectItem value="internal">Internal</SelectItem>
+                            <SelectItem value="routine">Routine</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="accountable_owner"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Accountable Owner</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Single person" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="escalation_owner"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Escalation Owner</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Escalation contact" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="approval" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="approval_source"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Approval Source</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="board">Board</SelectItem>
+                            <SelectItem value="chairman">Chairman</SelectItem>
+                            <SelectItem value="management">Management</SelectItem>
+                            <SelectItem value="internal">Internal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="approving_authority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Approving Authority</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Name or title" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="approval_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Approval Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="strategic_category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Strategic Category</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="revenue">Revenue</SelectItem>
+                            <SelectItem value="compliance">Compliance</SelectItem>
+                            <SelectItem value="operations">Operations</SelectItem>
+                            <SelectItem value="quality">Quality</SelectItem>
+                            <SelectItem value="brand">Brand</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="approval_evidence"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Approval Evidence</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Link to email, document, etc." 
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+
+              <TabsContent value="delivery" className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="approved">Approved</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="blocked">Blocked</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="dropped">Dropped</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="target_delivery_window"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Delivery</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="immediate">Immediate</SelectItem>
+                            <SelectItem value="month">This Month</SelectItem>
+                            <SelectItem value="quarter">This Quarter</SelectItem>
+                            <SelectItem value="flexible">Flexible</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {isDelivered && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="actual_delivery_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Actual Delivery Date</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="delivered_outcome_summary"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Delivered Outcome Summary</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="What was actually delivered..."
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="outcome_vs_intent"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Outcome vs Intent</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="How well did we deliver?" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="fully">Fully Matched</SelectItem>
+                              <SelectItem value="partial">Partially Matched</SelectItem>
+                              <SelectItem value="missed">Missed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="closure_notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Closure Notes</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Any additional notes..."
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Saving...' : (initiative ? 'Update' : 'Create')}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
