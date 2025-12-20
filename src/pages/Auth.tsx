@@ -24,7 +24,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && !loading) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, loading, navigate]);
 
@@ -53,7 +53,7 @@ export default function Auth() {
       }
     } else {
       toast.success('Signed in successfully');
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
@@ -83,7 +83,7 @@ export default function Auth() {
       }
     } else {
       toast.success('Account created successfully');
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
@@ -99,7 +99,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Management OS</CardTitle>
+          <CardTitle className="text-2xl font-bold">Apeejay ETS Management OS</CardTitle>
           <CardDescription>Decision-to-Outcome Intelligence Layer</CardDescription>
         </CardHeader>
         <CardContent>
