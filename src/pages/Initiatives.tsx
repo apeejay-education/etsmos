@@ -7,12 +7,16 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, List, LayoutGrid } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload } from 'lucide-react';
 import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
 import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
-import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
+import { CSVImportDialog } from '@/components/import/CSVImportDialog';
+import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, ApprovalSource, DeliveryWindow, StrategicCategory } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,8 +52,10 @@ export default function Initiatives() {
   const createInitiative = useCreateInitiative();
   const updateInitiative = useUpdateInitiative();
   const deleteInitiative = useDeleteInitiative();
+  const queryClient = useQueryClient();
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -61,6 +67,109 @@ export default function Initiatives() {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [isImporting, setIsImporting] = useState(false);
+
+  const validStatuses = ['approved', 'in_progress', 'blocked', 'delivered', 'dropped'];
+  const validPriorities = ['high', 'medium', 'low'];
+  const validSensitivities = ['confidential', 'internal', 'routine'];
+  const validApprovalSources = ['board', 'chairman', 'management', 'internal'];
+  const validDeliveryWindows = ['immediate', 'month', 'quarter', 'flexible'];
+  const validStrategicCategories = ['revenue', 'compliance', 'operations', 'quality', 'brand'];
+
+  const handleImportInitiatives = async (data: Record<string, string>[]): Promise<{ success: number; errors: string[] }> => {
+    setIsImporting(true);
+    const errors: string[] = [];
+    let success = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 2;
+
+      if (!row.title?.trim()) {
+        errors.push(`Row ${rowNum}: Title is required`);
+        continue;
+      }
+
+      if (!row.product_name?.trim()) {
+        errors.push(`Row ${rowNum}: Product name is required`);
+        continue;
+      }
+
+      // Find product by name
+      const product = products?.find(p => p.name.toLowerCase() === row.product_name.toLowerCase().trim());
+      if (!product) {
+        errors.push(`Row ${rowNum}: Product "${row.product_name}" not found. Please create the product first.`);
+        continue;
+      }
+
+      const status = row.status?.toLowerCase() || 'approved';
+      const priority = row.priority_level?.toLowerCase() || 'medium';
+      const sensitivity = row.sensitivity_level?.toLowerCase() || 'routine';
+      const approvalSource = row.approval_source?.toLowerCase() || 'internal';
+      const deliveryWindow = row.target_delivery_window?.toLowerCase() || 'flexible';
+      const strategicCategory = row.strategic_category?.toLowerCase() || null;
+
+      if (!validStatuses.includes(status)) {
+        errors.push(`Row ${rowNum}: Invalid status "${row.status}". Must be one of: ${validStatuses.join(', ')}`);
+        continue;
+      }
+
+      if (!validPriorities.includes(priority)) {
+        errors.push(`Row ${rowNum}: Invalid priority_level "${row.priority_level}". Must be one of: ${validPriorities.join(', ')}`);
+        continue;
+      }
+
+      if (!validSensitivities.includes(sensitivity)) {
+        errors.push(`Row ${rowNum}: Invalid sensitivity_level "${row.sensitivity_level}". Must be one of: ${validSensitivities.join(', ')}`);
+        continue;
+      }
+
+      if (!validApprovalSources.includes(approvalSource)) {
+        errors.push(`Row ${rowNum}: Invalid approval_source "${row.approval_source}". Must be one of: ${validApprovalSources.join(', ')}`);
+        continue;
+      }
+
+      if (!validDeliveryWindows.includes(deliveryWindow)) {
+        errors.push(`Row ${rowNum}: Invalid target_delivery_window "${row.target_delivery_window}". Must be one of: ${validDeliveryWindows.join(', ')}`);
+        continue;
+      }
+
+      if (strategicCategory && !validStrategicCategories.includes(strategicCategory)) {
+        errors.push(`Row ${rowNum}: Invalid strategic_category "${row.strategic_category}". Must be one of: ${validStrategicCategories.join(', ')}`);
+        continue;
+      }
+
+      const { error } = await supabase.from('initiatives').insert({
+        title: row.title.trim(),
+        product_id: product.id,
+        context: row.context?.trim() || null,
+        expected_outcome: row.expected_outcome?.trim() || null,
+        approval_source: approvalSource as ApprovalSource,
+        approval_date: row.approval_date || null,
+        status: status as InitiativeStatus,
+        priority_level: priority as PriorityLevel,
+        sensitivity_level: sensitivity as SensitivityLevel,
+        target_delivery_window: deliveryWindow as DeliveryWindow,
+        strategic_category: strategicCategory as StrategicCategory | null,
+        accountable_owner: row.accountable_owner?.trim() || null,
+        escalation_owner: row.escalation_owner?.trim() || null
+      });
+
+      if (error) {
+        errors.push(`Row ${rowNum}: ${error.message}`);
+      } else {
+        success++;
+      }
+    }
+
+    setIsImporting(false);
+    if (success > 0) {
+      queryClient.invalidateQueries({ queryKey: ['initiatives'] });
+      toast.success(`Imported ${success} initiative(s)`);
+    }
+
+    return { success, errors };
+  };
 
   // Parse URL params on mount
   useEffect(() => {
@@ -229,13 +338,23 @@ export default function Initiatives() {
             </p>
           </div>
           {canEdit && (
-            <Button 
-              onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
-              disabled={!products?.length}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Initiative
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setImportDialogOpen(true)}
+                disabled={!products?.length}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button 
+                onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
+                disabled={!products?.length}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Initiative
+              </Button>
+            </div>
           )}
         </div>
 
@@ -425,6 +544,17 @@ export default function Initiatives() {
           products={products || []}
           onSubmit={editingInitiative ? handleUpdate : handleCreate}
           isLoading={createInitiative.isPending || updateInitiative.isPending}
+        />
+
+        <CSVImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          title="Import Initiatives"
+          description="Upload a CSV file to import multiple initiatives at once. The CSV should have columns: title, product_name (must match existing product), context, expected_outcome, approval_source, approval_date, status, priority_level, sensitivity_level, target_delivery_window, strategic_category, accountable_owner, escalation_owner."
+          sampleCsvUrl="/samples/initiatives-sample.csv"
+          sampleFileName="initiatives-sample.csv"
+          onImport={handleImportInitiatives}
+          isLoading={isImporting}
         />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

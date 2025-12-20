@@ -5,11 +5,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, Upload } from 'lucide-react';
 import { ProductDialog } from '@/components/products/ProductDialog';
+import { CSVImportDialog } from '@/components/import/CSVImportDialog';
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useQueryClient } from '@tanstack/react-query';
 
 const sortOptions: SortOption[] = [
   { label: 'Name', value: 'name' },
@@ -41,8 +45,10 @@ export default function Products() {
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const deleteProduct = useDeleteProduct();
+  const queryClient = useQueryClient();
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -50,6 +56,71 @@ export default function Products() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const validProductTypes = ['internal', 'external', 'client', 'rnd'];
+  const validLifecycleStages = ['ideation', 'build', 'live', 'scale', 'maintenance', 'sunset'];
+  const validPriorities = ['high', 'medium', 'low'];
+
+  const handleImportProducts = async (data: Record<string, string>[]): Promise<{ success: number; errors: string[] }> => {
+    setIsImporting(true);
+    const errors: string[] = [];
+    let success = 0;
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const rowNum = i + 2; // +2 because of 0-index and header row
+
+      if (!row.name?.trim()) {
+        errors.push(`Row ${rowNum}: Name is required`);
+        continue;
+      }
+
+      const productType = row.product_type?.toLowerCase() || 'internal';
+      const lifecycleStage = row.lifecycle_stage?.toLowerCase() || 'ideation';
+      const priority = row.strategic_priority?.toLowerCase() || 'medium';
+
+      if (!validProductTypes.includes(productType)) {
+        errors.push(`Row ${rowNum}: Invalid product_type "${row.product_type}". Must be one of: ${validProductTypes.join(', ')}`);
+        continue;
+      }
+
+      if (!validLifecycleStages.includes(lifecycleStage)) {
+        errors.push(`Row ${rowNum}: Invalid lifecycle_stage "${row.lifecycle_stage}". Must be one of: ${validLifecycleStages.join(', ')}`);
+        continue;
+      }
+
+      if (!validPriorities.includes(priority)) {
+        errors.push(`Row ${rowNum}: Invalid strategic_priority "${row.strategic_priority}". Must be one of: ${validPriorities.join(', ')}`);
+        continue;
+      }
+
+      const { error } = await supabase.from('products').insert({
+        name: row.name.trim(),
+        description: row.description?.trim() || null,
+        product_type: productType as ProductType,
+        lifecycle_stage: lifecycleStage as ProductLifecycle,
+        strategic_priority: priority as PriorityLevel,
+        business_owner: row.business_owner?.trim() || null,
+        tech_owner: row.tech_owner?.trim() || null,
+        is_active: true
+      });
+
+      if (error) {
+        errors.push(`Row ${rowNum}: ${error.message}`);
+      } else {
+        success++;
+      }
+    }
+
+    setIsImporting(false);
+    if (success > 0) {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success(`Imported ${success} product(s)`);
+    }
+
+    return { success, errors };
+  };
 
   const handleCreate = (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     createProduct.mutate(data, {
@@ -171,10 +242,16 @@ export default function Products() {
             </p>
           </div>
           {canEdit && (
-            <Button onClick={() => { setEditingProduct(null); setDialogOpen(true); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button onClick={() => { setEditingProduct(null); setDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
           )}
         </div>
 
@@ -301,6 +378,17 @@ export default function Products() {
           product={editingProduct}
           onSubmit={editingProduct ? handleUpdate : handleCreate}
           isLoading={createProduct.isPending || updateProduct.isPending}
+        />
+
+        <CSVImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          title="Import Products"
+          description="Upload a CSV file to import multiple products at once. The CSV should have columns: name, description, product_type, lifecycle_stage, strategic_priority, business_owner, tech_owner."
+          sampleCsvUrl="/samples/products-sample.csv"
+          sampleFileName="products-sample.csv"
+          onImport={handleImportProducts}
+          isLoading={isImporting}
         />
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
