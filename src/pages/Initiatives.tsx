@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useInitiatives, useCreateInitiative, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
 import { useProducts } from '@/hooks/useProducts';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,8 +7,9 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, List, LayoutGrid } from 'lucide-react';
 import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
+import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
@@ -28,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { differenceInDays } from 'date-fns';
 
 const sortOptions: SortOption[] = [
@@ -38,6 +41,7 @@ const sortOptions: SortOption[] = [
 ];
 
 export default function Initiatives() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: initiatives, isLoading } = useInitiatives();
   const { data: products } = useProducts();
   const { canEdit, isAdmin } = useAuth();
@@ -48,11 +52,30 @@ export default function Initiatives() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
+  const [priorityFilter, setPriorityFilter] = useState<string>(searchParams.get('priority') || 'all');
+  const [sensitivityFilter, setSensitivityFilter] = useState<string>(searchParams.get('sensitivity') || 'all');
+  const [agingFilter, setAgingFilter] = useState<boolean>(searchParams.get('aging') === 'true');
+  const [silentFilter, setSilentFilter] = useState<boolean>(searchParams.get('silent') === 'true');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+
+  // Parse URL params on mount
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const sensitivity = searchParams.get('sensitivity');
+    const aging = searchParams.get('aging');
+    const silent = searchParams.get('silent');
+    const searchQuery = searchParams.get('search');
+
+    if (status) setStatusFilter(status);
+    if (sensitivity) setSensitivityFilter(sensitivity);
+    if (aging === 'true') setAgingFilter(true);
+    if (silent === 'true') setSilentFilter(true);
+    if (searchQuery) setSearch(searchQuery);
+  }, [searchParams]);
 
   const handleCreate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
     createInitiative.mutate(data, {
@@ -106,8 +129,26 @@ export default function Initiatives() {
     if (!initiatives) return [];
     
     let result = initiatives.filter((i) => {
-      if (statusFilter !== 'all' && i.status !== statusFilter) return false;
+      // Handle comma-separated status values
+      if (statusFilter !== 'all') {
+        const statuses = statusFilter.split(',');
+        if (!statuses.includes(i.status)) return false;
+      }
       if (priorityFilter !== 'all' && i.priority_level !== priorityFilter) return false;
+      if (sensitivityFilter !== 'all' && i.sensitivity_level !== sensitivityFilter) return false;
+      
+      // Aging filter (14+ days)
+      if (agingFilter) {
+        const aging = differenceInDays(new Date(), new Date(i.approval_date || i.created_at));
+        if (aging <= 14 || i.status === 'delivered' || i.status === 'dropped') return false;
+      }
+      
+      // Silent filter - no activity in 14+ days (simplified - would need execution_signals data)
+      if (silentFilter) {
+        const aging = differenceInDays(new Date(), new Date(i.updated_at));
+        if (aging <= 14 || i.status === 'delivered' || i.status === 'dropped') return false;
+      }
+      
       if (search) {
         const searchLower = search.toLowerCase();
         if (
@@ -144,7 +185,19 @@ export default function Initiatives() {
     }
 
     return result;
-  }, [initiatives, search, statusFilter, priorityFilter, sortBy, sortDirection]);
+  }, [initiatives, search, statusFilter, priorityFilter, sensitivityFilter, agingFilter, silentFilter, sortBy, sortDirection]);
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setSensitivityFilter('all');
+    setAgingFilter(false);
+    setSilentFilter(false);
+    setSearchParams({});
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || sensitivityFilter !== 'all' || agingFilter || silentFilter || search;
 
   if (isLoading) {
     return (
@@ -182,45 +235,73 @@ export default function Initiatives() {
           )}
         </div>
 
-        <div className="flex flex-wrap gap-4 items-center">
-          <SearchFilter
-            value={search}
-            onChange={setSearch}
-            placeholder="Search initiatives..."
-          />
-          <div className="flex gap-2 items-center">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="blocked">Blocked</SelectItem>
-                <SelectItem value="delivered">Delivered</SelectItem>
-                <SelectItem value="dropped">Dropped</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <SortButton
-              options={sortOptions}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSort={handleSort}
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center">
+            <SearchFilter
+              value={search}
+              onChange={setSearch}
+              placeholder="Search initiatives..."
             />
+            <div className="flex gap-2 items-center">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="blocked">Blocked</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="dropped">Dropped</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sensitivityFilter} onValueChange={setSensitivityFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Sensitivity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sensitivity</SelectItem>
+                  <SelectItem value="confidential">Confidential</SelectItem>
+                  <SelectItem value="internal">Internal</SelectItem>
+                  <SelectItem value="routine">Routine</SelectItem>
+                </SelectContent>
+              </Select>
+              {viewMode === 'list' && (
+                <SortButton
+                  options={sortOptions}
+                  sortBy={sortBy}
+                  sortDirection={sortDirection}
+                  onSort={handleSort}
+                />
+              )}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
           </div>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'list' | 'kanban')}>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="kanban" aria-label="Kanban view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         {!products?.length ? (
@@ -245,6 +326,14 @@ export default function Initiatives() {
               )}
             </CardContent>
           </Card>
+        ) : viewMode === 'kanban' ? (
+          <InitiativeKanban
+            initiatives={filteredInitiatives}
+            onEdit={(initiative) => { setEditingInitiative(initiative); setDialogOpen(true); }}
+            onDelete={(id) => setDeleteId(id)}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+          />
         ) : (
           <div className="space-y-4">
             {filteredInitiatives.map((initiative) => {

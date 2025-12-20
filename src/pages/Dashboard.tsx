@@ -20,8 +20,10 @@ import { DeliveryTrendsChart } from '@/components/dashboard/DeliveryTrendsChart'
 import { HealthDistributionChart } from '@/components/dashboard/HealthDistributionChart';
 import { ContributionStatsChart } from '@/components/dashboard/ContributionStatsChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { data, isLoading } = useDashboard();
   const { data: analyticsData, isLoading: analyticsLoading } = useAnalytics();
   const { data: alerts, isLoading: alertsLoading } = useAlerts();
@@ -50,49 +52,56 @@ export default function Dashboard() {
       value: stats?.openInitiatives || 0,
       description: 'Active work items',
       icon: Target,
-      variant: 'default' as const
+      variant: 'default' as const,
+      onClick: () => navigate('/initiatives?status=approved,in_progress,blocked')
     },
     {
       title: 'High Sensitivity',
       value: stats?.highSensitivityOpen || 0,
       description: 'Confidential items open',
       icon: AlertTriangle,
-      variant: stats?.highSensitivityOpen ? 'destructive' as const : 'default' as const
+      variant: stats?.highSensitivityOpen ? 'destructive' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?sensitivity=confidential')
     },
     {
       title: 'Blocked',
       value: stats?.blockedInitiatives || 0,
       description: 'Initiatives blocked',
       icon: AlertTriangle,
-      variant: stats?.blockedInitiatives ? 'destructive' as const : 'default' as const
+      variant: stats?.blockedInitiatives ? 'destructive' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?status=blocked')
     },
     {
       title: 'Aging (14+ days)',
       value: stats?.agingInitiatives || 0,
       description: 'Stale initiatives',
       icon: Clock,
-      variant: stats?.agingInitiatives ? 'warning' as const : 'default' as const
+      variant: stats?.agingInitiatives ? 'warning' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?aging=true')
     },
     {
       title: 'Delivered This Month',
       value: stats?.deliveredThisMonth || 0,
       description: 'Completed initiatives',
       icon: CheckCircle2,
-      variant: 'success' as const
+      variant: 'success' as const,
+      onClick: () => navigate('/initiatives?status=delivered')
     },
     {
       title: 'Red/Amber Signals',
       value: stats?.redAmberSignals || 0,
       description: 'Attention needed',
       icon: Activity,
-      variant: stats?.redAmberSignals ? 'destructive' as const : 'default' as const
+      variant: stats?.redAmberSignals ? 'destructive' as const : 'default' as const,
+      onClick: () => navigate('/signals?health=red,amber')
     },
     {
       title: 'Silent Initiatives',
       value: stats?.silentInitiatives || 0,
       description: 'No recent activity',
       icon: EyeOff,
-      variant: stats?.silentInitiatives ? 'warning' as const : 'default' as const
+      variant: stats?.silentInitiatives ? 'warning' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?silent=true')
     }
   ];
 
@@ -116,11 +125,16 @@ export default function Dashboard() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.title} className={cn(
-              stat.variant === 'destructive' && 'border-destructive/50 bg-destructive/5',
-              stat.variant === 'success' && 'border-green-500/50 bg-green-500/5',
-              stat.variant === 'warning' && 'border-yellow-500/50 bg-yellow-500/5'
-            )}>
+            <Card 
+              key={stat.title} 
+              className={cn(
+                'cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md',
+                stat.variant === 'destructive' && 'border-destructive/50 bg-destructive/5',
+                stat.variant === 'success' && 'border-green-500/50 bg-green-500/5',
+                stat.variant === 'warning' && 'border-yellow-500/50 bg-yellow-500/5'
+              )}
+              onClick={stat.onClick}
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
                   {stat.title}
@@ -203,7 +217,8 @@ export default function Dashboard() {
                     {data?.recentInitiatives?.map((initiative) => (
                       <div
                         key={initiative.id}
-                        className="flex items-center justify-between p-4 border rounded-lg"
+                        className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => navigate(`/initiatives?search=${encodeURIComponent(initiative.title)}`)}
                       >
                         <div className="space-y-1">
                           <p className="font-medium">{initiative.title}</p>
