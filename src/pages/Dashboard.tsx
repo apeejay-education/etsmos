@@ -1,19 +1,30 @@
 import { useDashboard } from '@/hooks/useDashboard';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { useAlerts } from '@/hooks/useAlerts';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Target, 
   AlertTriangle, 
   Clock, 
   CheckCircle2, 
   Activity,
-  EyeOff
+  EyeOff,
+  BarChart3,
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DeliveryTrendsChart } from '@/components/dashboard/DeliveryTrendsChart';
+import { HealthDistributionChart } from '@/components/dashboard/HealthDistributionChart';
+import { ContributionStatsChart } from '@/components/dashboard/ContributionStatsChart';
+import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 
 export default function Dashboard() {
   const { data, isLoading } = useDashboard();
+  const { data: analyticsData, isLoading: analyticsLoading } = useAnalytics();
+  const { data: alerts, isLoading: alertsLoading } = useAlerts();
 
   if (isLoading) {
     return (
@@ -31,6 +42,7 @@ export default function Dashboard() {
   }
 
   const stats = data?.stats;
+  const criticalAlerts = alerts?.filter(a => a.severity === 'critical').length || 0;
 
   const statCards = [
     {
@@ -87,11 +99,19 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
-          <p className="text-muted-foreground">
-            Decision-to-outcome intelligence at a glance
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
+            <p className="text-muted-foreground">
+              Decision-to-outcome intelligence at a glance
+            </p>
+          </div>
+          {criticalAlerts > 0 && (
+            <Badge variant="destructive" className="gap-1">
+              <Bell className="h-3 w-3" />
+              {criticalAlerts} Critical Alert{criticalAlerts > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -123,52 +143,97 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Initiatives</CardTitle>
-            <CardDescription>
-              Latest initiatives across all products
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {data?.recentInitiatives?.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No initiatives yet. Create your first initiative to get started.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {data?.recentInitiatives?.map((initiative) => (
-                  <div
-                    key={initiative.id}
-                    className="flex items-center justify-between p-4 border rounded-lg"
-                  >
-                    <div className="space-y-1">
-                      <p className="font-medium">{initiative.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {initiative.products?.name || 'No product'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={
-                        initiative.priority_level === 'high' ? 'destructive' :
-                        initiative.priority_level === 'medium' ? 'default' : 'secondary'
-                      }>
-                        {initiative.priority_level}
-                      </Badge>
-                      <Badge variant={
-                        initiative.status === 'delivered' ? 'default' :
-                        initiative.status === 'blocked' ? 'destructive' :
-                        'outline'
-                      }>
-                        {initiative.status.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
+        <Tabs defaultValue="analytics" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="analytics" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="gap-2">
+              <Bell className="h-4 w-4" />
+              Alerts
+              {(alerts?.length || 0) > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {alerts?.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="recent">Recent Activity</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analytics" className="space-y-4">
+            {analyticsLoading ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-[380px] bg-muted rounded animate-pulse" />
                 ))}
               </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                <DeliveryTrendsChart data={analyticsData?.deliveryTrends || []} />
+                <HealthDistributionChart data={analyticsData?.healthDistribution || []} />
+                <ContributionStatsChart data={analyticsData?.contributionStats || []} />
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+
+          <TabsContent value="alerts">
+            {alertsLoading ? (
+              <div className="h-[400px] bg-muted rounded animate-pulse" />
+            ) : (
+              <AlertsPanel alerts={alerts || []} maxItems={15} />
+            )}
+          </TabsContent>
+
+          <TabsContent value="recent">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Initiatives</CardTitle>
+                <CardDescription>
+                  Latest initiatives across all products
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data?.recentInitiatives?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    No initiatives yet. Create your first initiative to get started.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {data?.recentInitiatives?.map((initiative) => (
+                      <div
+                        key={initiative.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">{initiative.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {initiative.products?.name || 'No product'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            initiative.priority_level === 'high' ? 'destructive' :
+                            initiative.priority_level === 'medium' ? 'default' : 'secondary'
+                          }>
+                            {initiative.priority_level}
+                          </Badge>
+                          <Badge variant={
+                            initiative.status === 'delivered' ? 'default' :
+                            initiative.status === 'blocked' ? 'destructive' :
+                            'outline'
+                          }>
+                            {initiative.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
