@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      contributions: {
+        Row: {
+          assessed_at: string | null
+          assessed_by: string | null
+          assessment_notes: string | null
+          contribution_role: Database["public"]["Enums"]["contribution_role"]
+          contribution_summary: string | null
+          created_at: string
+          id: string
+          initiative_id: string
+          performance_rating:
+            | Database["public"]["Enums"]["performance_rating"]
+            | null
+          person_id: string
+          updated_at: string
+        }
+        Insert: {
+          assessed_at?: string | null
+          assessed_by?: string | null
+          assessment_notes?: string | null
+          contribution_role?: Database["public"]["Enums"]["contribution_role"]
+          contribution_summary?: string | null
+          created_at?: string
+          id?: string
+          initiative_id: string
+          performance_rating?:
+            | Database["public"]["Enums"]["performance_rating"]
+            | null
+          person_id: string
+          updated_at?: string
+        }
+        Update: {
+          assessed_at?: string | null
+          assessed_by?: string | null
+          assessment_notes?: string | null
+          contribution_role?: Database["public"]["Enums"]["contribution_role"]
+          contribution_summary?: string | null
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          performance_rating?:
+            | Database["public"]["Enums"]["performance_rating"]
+            | null
+          person_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contributions_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contributions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       execution_signals: {
         Row: {
           created_at: string
@@ -157,6 +220,78 @@ export type Database = {
           },
         ]
       }
+      monthly_snapshots: {
+        Row: {
+          blockers_faced: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          key_deliveries: string | null
+          lessons_learned: string | null
+          month_year: string
+          next_month_focus: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          blockers_faced?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_deliveries?: string | null
+          lessons_learned?: string | null
+          month_year: string
+          next_month_focus?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blockers_faced?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_deliveries?: string | null
+          lessons_learned?: string | null
+          month_year?: string
+          next_month_focus?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      people: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          role_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean
+          role_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          role_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           business_owner: string | null
@@ -264,6 +399,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "viewer"
       approval_source: "board" | "chairman" | "management" | "internal"
+      contribution_role: "lead" | "contributor" | "reviewer" | "advisor"
       delivery_window: "immediate" | "month" | "quarter" | "flexible"
       execution_stage: "not_started" | "active" | "paused" | "completed"
       health_status: "green" | "amber" | "red"
@@ -274,6 +410,11 @@ export type Database = {
         | "delivered"
         | "dropped"
       outcome_match: "fully" | "partial" | "missed"
+      performance_rating:
+        | "exceptional"
+        | "strong"
+        | "meets_expectations"
+        | "needs_improvement"
       priority_level: "high" | "medium" | "low"
       product_lifecycle:
         | "ideation"
@@ -419,6 +560,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "viewer"],
       approval_source: ["board", "chairman", "management", "internal"],
+      contribution_role: ["lead", "contributor", "reviewer", "advisor"],
       delivery_window: ["immediate", "month", "quarter", "flexible"],
       execution_stage: ["not_started", "active", "paused", "completed"],
       health_status: ["green", "amber", "red"],
@@ -430,6 +572,12 @@ export const Constants = {
         "dropped",
       ],
       outcome_match: ["fully", "partial", "missed"],
+      performance_rating: [
+        "exceptional",
+        "strong",
+        "meets_expectations",
+        "needs_improvement",
+      ],
       priority_level: ["high", "medium", "low"],
       product_lifecycle: [
         "ideation",
