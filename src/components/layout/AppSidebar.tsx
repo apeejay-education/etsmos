@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import apeejayLogo from '@/assets/apeejay-logo.png';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -34,8 +35,12 @@ export function AppSidebar() {
 
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-sidebar">
-      <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-lg font-semibold text-sidebar-foreground">Apeejay ETS</h1>
+      <div className="flex h-16 items-center border-b px-4 gap-3">
+        <img src={apeejayLogo} alt="Apeejay Logo" className="h-10 w-10 object-contain" />
+        <div>
+          <h1 className="text-sm font-semibold text-sidebar-foreground">Apeejay ETS</h1>
+          <p className="text-xs text-muted-foreground">Management OS</p>
+        </div>
       </div>
       
       <nav className="flex-1 space-y-1 px-3 py-4">
