@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Initiatives', href: '/initiatives', icon: Target },
   { name: 'Execution Signals', href: '/signals', icon: Activity },
@@ -35,7 +35,7 @@ export function AppSidebar() {
   return (
     <div className="flex h-screen w-64 flex-col border-r bg-sidebar">
       <div className="flex h-16 items-center border-b px-6">
-        <h1 className="text-lg font-semibold text-sidebar-foreground">Management OS</h1>
+        <h1 className="text-lg font-semibold text-sidebar-foreground">Apeejay ETS</h1>
       </div>
       
       <nav className="flex-1 space-y-1 px-3 py-4">
