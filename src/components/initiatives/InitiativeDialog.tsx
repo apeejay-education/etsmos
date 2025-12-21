@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { calculateDeliveryWindow, formatDeliveryWindow } from '@/utils/deliveryWindowCalculator';
 
 const initiativeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
@@ -46,6 +48,7 @@ const initiativeSchema = z.object({
   escalation_owner: z.string().max(100).nullable(),
   status: z.enum(['approved', 'in_progress', 'blocked', 'delivered', 'dropped'] as const),
   target_delivery_window: z.enum(['immediate', 'month', 'quarter', 'flexible'] as const),
+  tentative_delivery_date: z.string().nullable(),
   actual_delivery_date: z.string().nullable(),
   delivered_outcome_summary: z.string().max(2000).nullable(),
   outcome_vs_intent: z.enum(['fully', 'partial', 'missed'] as const).nullable(),
@@ -89,6 +92,7 @@ export function InitiativeDialog({
       escalation_owner: null,
       status: 'approved',
       target_delivery_window: 'flexible',
+      tentative_delivery_date: null,
       actual_delivery_date: null,
       delivered_outcome_summary: null,
       outcome_vs_intent: null,
@@ -114,6 +118,7 @@ export function InitiativeDialog({
         escalation_owner: initiative.escalation_owner,
         status: initiative.status,
         target_delivery_window: initiative.target_delivery_window,
+        tentative_delivery_date: initiative.tentative_delivery_date,
         actual_delivery_date: initiative.actual_delivery_date,
         delivered_outcome_summary: initiative.delivered_outcome_summary,
         outcome_vs_intent: initiative.outcome_vs_intent,
@@ -136,6 +141,7 @@ export function InitiativeDialog({
         escalation_owner: null,
         status: 'approved',
         target_delivery_window: 'flexible',
+        tentative_delivery_date: null,
         actual_delivery_date: null,
         delivered_outcome_summary: null,
         outcome_vs_intent: null,
@@ -144,12 +150,22 @@ export function InitiativeDialog({
     }
   }, [initiative, form, products]);
 
+  // Auto-calculate target window when tentative date changes
+  const tentativeDate = form.watch('tentative_delivery_date');
+  useEffect(() => {
+    if (tentativeDate) {
+      const calculatedWindow = calculateDeliveryWindow(tentativeDate);
+      form.setValue('target_delivery_window', calculatedWindow);
+    }
+  }, [tentativeDate, form]);
+
   const handleSubmit = (data: InitiativeFormData) => {
     onSubmit(data);
   };
 
   const status = form.watch('status');
   const isDelivered = status === 'delivered';
+  const currentWindow = form.watch('target_delivery_window');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -470,28 +486,54 @@ export function InitiativeDialog({
 
                   <FormField
                     control={form.control}
-                    name="target_delivery_window"
+                    name="tentative_delivery_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target Delivery</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="immediate">Immediate</SelectItem>
-                            <SelectItem value="month">This Month</SelectItem>
-                            <SelectItem value="quarter">This Quarter</SelectItem>
-                            <SelectItem value="flexible">Flexible</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <FormLabel>Tentative Delivery Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date" 
+                            {...field}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Auto-calculates Target Window
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="target_delivery_window"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Delivery Window</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="immediate">Immediate (≤10 days)</SelectItem>
+                          <SelectItem value="month">This Month (10-30 days)</SelectItem>
+                          <SelectItem value="quarter">This Quarter (30-70 days)</SelectItem>
+                          <SelectItem value="flexible">Flexible (&gt;70 days)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {tentativeDate && (
+                        <FormDescription className="text-xs">
+                          Calculated: {formatDeliveryWindow(currentWindow)}
+                        </FormDescription>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {isDelivered && (
                   <>

@@ -13,7 +13,9 @@ import {
   Activity,
   EyeOff,
   BarChart3,
-  Bell
+  Bell,
+  Rocket,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliveryTrendsChart } from '@/components/dashboard/DeliveryTrendsChart';
@@ -21,6 +23,7 @@ import { HealthDistributionChart } from '@/components/dashboard/HealthDistributi
 import { ContributionStatsChart } from '@/components/dashboard/ContributionStatsChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -56,12 +59,20 @@ export default function Dashboard() {
       onClick: () => navigate('/initiatives?status=approved,in_progress,blocked')
     },
     {
-      title: 'High Sensitivity',
-      value: stats?.highSensitivityOpen || 0,
-      description: 'Confidential items open',
-      icon: AlertTriangle,
-      variant: stats?.highSensitivityOpen ? 'destructive' as const : 'default' as const,
-      onClick: () => navigate('/initiatives?sensitivity=confidential')
+      title: 'Upcoming Launches',
+      value: stats?.upcomingLaunches || 0,
+      description: 'Launching within 10 days',
+      icon: Rocket,
+      variant: stats?.upcomingLaunches ? 'success' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?upcoming=true')
+    },
+    {
+      title: 'At Risk',
+      value: stats?.atRiskInitiatives || 0,
+      description: 'Due soon but not in progress',
+      icon: AlertCircle,
+      variant: stats?.atRiskInitiatives ? 'destructive' as const : 'default' as const,
+      onClick: () => navigate('/initiatives?atrisk=true')
     },
     {
       title: 'Blocked',
@@ -199,7 +210,88 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          <TabsContent value="recent">
+          <TabsContent value="recent" className="space-y-4">
+            {/* Upcoming Launches */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="h-5 w-5 text-green-500" />
+                  Upcoming Launches
+                </CardTitle>
+                <CardDescription>
+                  Initiatives in progress, launching within 10 business days
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data?.upcomingLaunchList?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No upcoming launches scheduled.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {data?.upcomingLaunchList?.map((initiative) => (
+                      <div
+                        key={initiative.id}
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-green-500/30 bg-green-500/5"
+                        onClick={() => navigate(`/initiatives?search=${encodeURIComponent(initiative.title)}`)}
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">{initiative.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {initiative.products?.name || 'No product'} • Due: {initiative.tentative_delivery_date ? format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy') : 'Not set'}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="border-green-500 text-green-600">
+                          In Progress
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* At Risk Initiatives */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  At Risk
+                </CardTitle>
+                <CardDescription>
+                  Due within 10 days but status is Blocked or Approved (not started)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {data?.atRiskList?.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No at-risk initiatives.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {data?.atRiskList?.map((initiative) => (
+                      <div
+                        key={initiative.id}
+                        className="flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-destructive/30 bg-destructive/5"
+                        onClick={() => navigate(`/initiatives?search=${encodeURIComponent(initiative.title)}`)}
+                      >
+                        <div className="space-y-1">
+                          <p className="font-medium">{initiative.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {initiative.products?.name || 'No product'} • Due: {initiative.tentative_delivery_date ? format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy') : 'Not set'}
+                          </p>
+                        </div>
+                        <Badge variant="destructive">
+                          {initiative.status === 'blocked' ? 'Blocked' : 'Not Started'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Recent Initiatives */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Initiatives</CardTitle>
