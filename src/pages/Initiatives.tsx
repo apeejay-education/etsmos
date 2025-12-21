@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { differenceInDays, format } from 'date-fns';
+import { isUpcomingLaunch, isInitiativeAtRisk } from '@/utils/deliveryWindowCalculator';
 
 const sortOptions: SortOption[] = [
   { label: 'Title', value: 'title' },
@@ -66,6 +67,9 @@ export default function Initiatives() {
   const [sensitivityFilter, setSensitivityFilter] = useState<string>(searchParams.get('sensitivity') || 'all');
   const [agingFilter, setAgingFilter] = useState<boolean>(searchParams.get('aging') === 'true');
   const [silentFilter, setSilentFilter] = useState<boolean>(searchParams.get('silent') === 'true');
+  const [upcomingFilter, setUpcomingFilter] = useState<boolean>(searchParams.get('upcoming') === 'true');
+  const [atRiskFilter, setAtRiskFilter] = useState<boolean>(searchParams.get('atRisk') === 'true');
+  const [overdueFilter, setOverdueFilter] = useState<boolean>(searchParams.get('overdue') === 'true');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [viewMode, setViewMode] = useState<'card' | 'kanban' | 'table'>('card');
@@ -226,12 +230,18 @@ export default function Initiatives() {
     const sensitivity = searchParams.get('sensitivity');
     const aging = searchParams.get('aging');
     const silent = searchParams.get('silent');
+    const upcoming = searchParams.get('upcoming');
+    const atRisk = searchParams.get('atRisk');
+    const overdue = searchParams.get('overdue');
     const searchQuery = searchParams.get('search');
 
     if (status) setStatusFilter(status);
     if (sensitivity) setSensitivityFilter(sensitivity);
     if (aging === 'true') setAgingFilter(true);
     if (silent === 'true') setSilentFilter(true);
+    if (upcoming === 'true') setUpcomingFilter(true);
+    if (atRisk === 'true') setAtRiskFilter(true);
+    if (overdue === 'true') setOverdueFilter(true);
     if (searchQuery) setSearch(searchQuery);
   }, [searchParams]);
 
@@ -311,6 +321,23 @@ export default function Initiatives() {
         if (aging <= 14 || i.status === 'delivered' || i.status === 'dropped') return false;
       }
       
+      // Upcoming filter - in_progress with delivery within 10 business days
+      if (upcomingFilter) {
+        if (!isUpcomingLaunch(i.status, i.tentative_delivery_date)) return false;
+      }
+      
+      // At Risk filter - blocked/approved with delivery within 10 business days
+      if (atRiskFilter) {
+        if (!isInitiativeAtRisk(i.status, i.tentative_delivery_date)) return false;
+      }
+      
+      // Overdue filter - past tentative delivery date
+      if (overdueFilter) {
+        if (!i.tentative_delivery_date) return false;
+        const deliveryDate = new Date(i.tentative_delivery_date);
+        if (deliveryDate >= new Date() || i.status === 'delivered' || i.status === 'dropped') return false;
+      }
+      
       if (search) {
         const searchLower = search.toLowerCase();
         if (
@@ -347,7 +374,7 @@ export default function Initiatives() {
     }
 
     return result;
-  }, [initiatives, search, statusFilter, priorityFilter, sensitivityFilter, agingFilter, silentFilter, sortBy, sortDirection]);
+  }, [initiatives, search, statusFilter, priorityFilter, sensitivityFilter, agingFilter, silentFilter, upcomingFilter, atRiskFilter, overdueFilter, sortBy, sortDirection]);
 
   const clearFilters = () => {
     setSearch('');
@@ -356,10 +383,13 @@ export default function Initiatives() {
     setSensitivityFilter('all');
     setAgingFilter(false);
     setSilentFilter(false);
+    setUpcomingFilter(false);
+    setAtRiskFilter(false);
+    setOverdueFilter(false);
     setSearchParams({});
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || sensitivityFilter !== 'all' || agingFilter || silentFilter || search;
+  const hasActiveFilters = statusFilter !== 'all' || priorityFilter !== 'all' || sensitivityFilter !== 'all' || agingFilter || silentFilter || upcomingFilter || atRiskFilter || overdueFilter || search;
 
   if (isLoading) {
     return (
@@ -457,6 +487,30 @@ export default function Initiatives() {
                   <SelectItem value="routine">Routine</SelectItem>
                 </SelectContent>
               </Select>
+              <Button
+                variant={upcomingFilter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setUpcomingFilter(!upcomingFilter)}
+                className="whitespace-nowrap"
+              >
+                Upcoming
+              </Button>
+              <Button
+                variant={atRiskFilter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAtRiskFilter(!atRiskFilter)}
+                className="whitespace-nowrap"
+              >
+                At Risk
+              </Button>
+              <Button
+                variant={overdueFilter ? 'destructive' : 'outline'}
+                size="sm"
+                onClick={() => setOverdueFilter(!overdueFilter)}
+                className="whitespace-nowrap"
+              >
+                Overdue
+              </Button>
               {viewMode !== 'kanban' && (
                 <SortButton
                   options={sortOptions}
