@@ -7,16 +7,18 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload, Download, Columns3 } from 'lucide-react';
 import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
 import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
-import { CSVImportDialog } from '@/components/import/CSVImportDialog';
+import { InitiativeTable } from '@/components/initiatives/InitiativeTable';
+import { CSVImportDialog, DuplicateInfo } from '@/components/import/CSVImportDialog';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, ApprovalSource, DeliveryWindow, StrategicCategory } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { exportInitiativesToCSV, INITIATIVES_SAMPLE_CSV } from '@/utils/csvExport';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +68,7 @@ export default function Initiatives() {
   const [silentFilter, setSilentFilter] = useState<boolean>(searchParams.get('silent') === 'true');
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'card' | 'kanban' | 'table'>('card');
   const [isImporting, setIsImporting] = useState(false);
 
   const validStatuses = ['approved', 'in_progress', 'blocked', 'delivered', 'dropped'];
@@ -76,7 +78,35 @@ export default function Initiatives() {
   const validDeliveryWindows = ['immediate', 'month', 'quarter', 'flexible'];
   const validStrategicCategories = ['revenue', 'compliance', 'operations', 'quality', 'brand'];
 
-  const handleImportInitiatives = async (data: Record<string, string>[]): Promise<{ success: number; errors: string[] }> => {
+  const checkDuplicates = async (data: Record<string, string>[]): Promise<DuplicateInfo[]> => {
+    const duplicates: DuplicateInfo[] = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const title = row.title?.trim().toLowerCase();
+      const productName = row.product_name?.trim().toLowerCase();
+      
+      if (title && productName) {
+        const product = products?.find(p => p.name.toLowerCase() === productName);
+        if (product) {
+          const existing = initiatives?.find(
+            init => init.title.toLowerCase() === title && init.product_id === product.id
+          );
+          if (existing) {
+            duplicates.push({
+              rowNum: i + 2,
+              identifier: `${row.title} (${row.product_name})`,
+              existingId: existing.id
+            });
+          }
+        }
+      }
+    }
+    
+    return duplicates;
+  };
+
+  const handleImportInitiatives = async (data: Record<string, string>[], skipDuplicates: boolean): Promise<{ success: number; errors: string[] }> => {
     setIsImporting(true);
     const errors: string[] = [];
     let success = 0;
@@ -100,6 +130,16 @@ export default function Initiatives() {
       if (!product) {
         errors.push(`Row ${rowNum}: Product "${row.product_name}" not found. Please create the product first.`);
         continue;
+      }
+
+      // Check for duplicate
+      if (skipDuplicates) {
+        const existing = initiatives?.find(
+          init => init.title.toLowerCase() === row.title.trim().toLowerCase() && init.product_id === product.id
+        );
+        if (existing) {
+          continue; // Skip this row
+        }
       }
 
       const status = row.status?.toLowerCase() || 'approved';
@@ -169,6 +209,15 @@ export default function Initiatives() {
     }
 
     return { success, errors };
+  };
+
+  const handleExport = () => {
+    if (!initiatives || initiatives.length === 0) {
+      toast.error('No initiatives to export');
+      return;
+    }
+    exportInitiativesToCSV(initiatives);
+    toast.success(`Exported ${initiatives.length} initiative(s)`);
   };
 
   // Parse URL params on mount
@@ -337,25 +386,31 @@ export default function Initiatives() {
               Track approved work and decisions
             </p>
           </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={() => setImportDialogOpen(true)}
-                disabled={!products?.length}
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import CSV
-              </Button>
-              <Button 
-                onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
-                disabled={!products?.length}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Initiative
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={!initiatives?.length}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            {canEdit && (
+              <>
+                <Button 
+                  variant="outline"
+                  onClick={() => setImportDialogOpen(true)}
+                  disabled={!products?.length}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import CSV
+                </Button>
+                <Button 
+                  onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
+                  disabled={!products?.length}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Initiative
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-4 items-center justify-between">
@@ -402,7 +457,7 @@ export default function Initiatives() {
                   <SelectItem value="routine">Routine</SelectItem>
                 </SelectContent>
               </Select>
-              {viewMode === 'list' && (
+              {viewMode !== 'kanban' && (
                 <SortButton
                   options={sortOptions}
                   sortBy={sortBy}
@@ -417,12 +472,15 @@ export default function Initiatives() {
               )}
             </div>
           </div>
-          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'list' | 'kanban')}>
-            <ToggleGroupItem value="list" aria-label="List view">
+          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'card' | 'kanban' | 'table')}>
+            <ToggleGroupItem value="card" aria-label="Card view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view">
               <List className="h-4 w-4" />
             </ToggleGroupItem>
             <ToggleGroupItem value="kanban" aria-label="Kanban view">
-              <LayoutGrid className="h-4 w-4" />
+              <Columns3 className="h-4 w-4" />
             </ToggleGroupItem>
           </ToggleGroup>
         </div>
@@ -455,6 +513,14 @@ export default function Initiatives() {
             onEdit={(initiative) => { setEditingInitiative(initiative); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
             onStatusChange={handleStatusChange}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+          />
+        ) : viewMode === 'table' ? (
+          <InitiativeTable
+            initiatives={filteredInitiatives}
+            onEdit={(initiative) => { setEditingInitiative(initiative as Initiative); setDialogOpen(true); }}
+            onDelete={(id) => setDeleteId(id)}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />
@@ -551,9 +617,10 @@ export default function Initiatives() {
           onOpenChange={setImportDialogOpen}
           title="Import Initiatives"
           description="Upload a CSV file to import multiple initiatives at once. The CSV should have columns: title, product_name (must match existing product), context, expected_outcome, approval_source, approval_date, status, priority_level, sensitivity_level, target_delivery_window, strategic_category, accountable_owner, escalation_owner."
-          sampleCsvUrl="/samples/initiatives-sample.csv"
+          sampleCsvContent={INITIATIVES_SAMPLE_CSV}
           sampleFileName="initiatives-sample.csv"
           onImport={handleImportInitiatives}
+          checkDuplicates={checkDuplicates}
           isLoading={isImporting}
         />
 
