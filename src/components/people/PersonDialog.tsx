@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -18,19 +20,23 @@ interface PersonDialogProps {
   person?: Person | null;
 }
 
-interface FormData {
-  full_name: string;
-  email: string;
-  department: string;
-  role_title: string;
-  is_active: boolean;
-}
+// Zod validation schema with proper length constraints
+const personSchema = z.object({
+  full_name: z.string().min(1, 'Name is required').max(200, 'Name must be less than 200 characters'),
+  email: z.string().email('Invalid email address').max(255, 'Email must be less than 255 characters').or(z.literal('')),
+  department: z.string().max(100, 'Department must be less than 100 characters').or(z.literal('')),
+  role_title: z.string().max(100, 'Role must be less than 100 characters').or(z.literal('')),
+  is_active: z.boolean(),
+});
+
+type FormData = z.infer<typeof personSchema>;
 
 export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) {
   const { createPerson, updatePerson } = usePeople();
   const isEditing = !!person;
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(personSchema),
     defaultValues: {
       full_name: '',
       email: '',
@@ -64,10 +70,10 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
 
   const onSubmit = async (data: FormData) => {
     const personData: PersonInsert = {
-      full_name: data.full_name,
-      email: data.email || null,
-      department: data.department || null,
-      role_title: data.role_title || null,
+      full_name: data.full_name.trim(),
+      email: data.email?.trim() || null,
+      department: data.department?.trim() || null,
+      role_title: data.role_title?.trim() || null,
       is_active: data.is_active,
     };
 
@@ -92,7 +98,8 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             <Label htmlFor="full_name">Full Name *</Label>
             <Input
               id="full_name"
-              {...register('full_name', { required: 'Name is required' })}
+              maxLength={200}
+              {...register('full_name')}
             />
             {errors.full_name && (
               <p className="text-sm text-destructive mt-1">{errors.full_name.message}</p>
@@ -104,8 +111,12 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             <Input
               id="email"
               type="email"
+              maxLength={255}
               {...register('email')}
             />
+            {errors.email && (
+              <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+            )}
           </div>
 
           <div>
@@ -113,8 +124,12 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             <Input
               id="department"
               placeholder="e.g., Engineering, Product, Design"
+              maxLength={100}
               {...register('department')}
             />
+            {errors.department && (
+              <p className="text-sm text-destructive mt-1">{errors.department.message}</p>
+            )}
           </div>
 
           <div>
@@ -122,8 +137,12 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             <Input
               id="role_title"
               placeholder="e.g., Senior Developer, Product Manager"
+              maxLength={100}
               {...register('role_title')}
             />
+            {errors.role_title && (
+              <p className="text-sm text-destructive mt-1">{errors.role_title.message}</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">
