@@ -94,7 +94,11 @@ export function InitiativeTable({ initiatives, onEdit, onDelete, canEdit, isAdmi
               </TableCell>
               <TableCell>{initiative.accountable_owner || '-'}</TableCell>
               <TableCell className="capitalize">{initiative.target_delivery_window}</TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className={`text-sm ${
+                initiative.tentative_delivery_date && new Date(initiative.tentative_delivery_date) < new Date() && initiative.status !== 'delivered' && initiative.status !== 'dropped'
+                  ? 'text-destructive font-medium'
+                  : 'text-muted-foreground'
+              }`}>
                 {initiative.tentative_delivery_date 
                   ? format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')
                   : '-'
