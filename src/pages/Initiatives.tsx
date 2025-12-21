@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 
 const sortOptions: SortOption[] = [
   { label: 'Title', value: 'title' },
@@ -567,6 +567,16 @@ export default function Initiatives() {
                             <Badge variant="outline">
                               {initiative.approval_source}
                             </Badge>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-4 mt-2 text-xs text-muted-foreground">
+                          <span className="capitalize">
+                            <span className="font-medium">Window:</span> {initiative.target_delivery_window}
+                          </span>
+                          {initiative.tentative_delivery_date && (
+                            <span>
+                              <span className="font-medium">Target:</span> {format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')}
+                            </span>
                           )}
                         </div>
                         {initiative.accountable_owner && (

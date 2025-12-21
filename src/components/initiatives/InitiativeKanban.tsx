@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
@@ -189,6 +189,11 @@ export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange
                             </Badge>
                           )}
                         </div>
+                        {initiative.tentative_delivery_date && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Due: {format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')}
+                          </p>
+                        )}
                         {initiative.accountable_owner && (
                           <p className="text-xs text-muted-foreground truncate">
                             {initiative.accountable_owner}
