@@ -375,6 +375,7 @@ export default function Products() {
             products={filteredProducts}
             onEdit={(product) => { setEditingProduct(product); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
+            onUpdate={(id, field, value) => updateProduct.mutate({ id, [field]: value })}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />
