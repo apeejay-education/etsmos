@@ -575,6 +575,7 @@ export default function Initiatives() {
             initiatives={filteredInitiatives}
             onEdit={(initiative) => { setEditingInitiative(initiative as Initiative); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
+            onUpdate={(id, field, value) => updateInitiative.mutate({ id, [field]: value })}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />

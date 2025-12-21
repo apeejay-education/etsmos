@@ -1,7 +1,7 @@
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -11,11 +11,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { InlineEditCell } from '@/components/ui/inline-edit-cell';
 
 interface ProductTableProps {
   products: Product[];
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
+  onUpdate: (id: string, field: string, value: string | boolean) => void;
   canEdit: boolean;
   isAdmin: boolean;
 }
@@ -42,7 +44,29 @@ const typeLabels: Record<ProductType, string> = {
   rnd: 'R&D'
 };
 
-export function ProductTable({ products, onEdit, onDelete, canEdit, isAdmin }: ProductTableProps) {
+const typeOptions = [
+  { value: 'internal', label: 'Internal' },
+  { value: 'external', label: 'External' },
+  { value: 'client', label: 'Client' },
+  { value: 'rnd', label: 'R&D' },
+];
+
+const lifecycleOptions = [
+  { value: 'ideation', label: 'Ideation' },
+  { value: 'build', label: 'Build' },
+  { value: 'live', label: 'Live' },
+  { value: 'scale', label: 'Scale' },
+  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'sunset', label: 'Sunset' },
+];
+
+const priorityOptions = [
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
+
+export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, isAdmin }: ProductTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -56,7 +80,7 @@ export function ProductTable({ products, onEdit, onDelete, canEdit, isAdmin }: P
             <TableHead>Tech Owner</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
-            {canEdit && <TableHead className="w-24">Actions</TableHead>}
+            {isAdmin && <TableHead className="w-16">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -64,7 +88,11 @@ export function ProductTable({ products, onEdit, onDelete, canEdit, isAdmin }: P
             <TableRow key={product.id} className={!product.is_active ? 'opacity-60' : ''}>
               <TableCell className="font-medium">
                 <div>
-                  <p>{product.name}</p>
+                  <InlineEditCell
+                    value={product.name}
+                    onSave={(value) => onUpdate(product.id, 'name', value)}
+                    canEdit={canEdit}
+                  />
                   {product.description && (
                     <p className="text-xs text-muted-foreground truncate max-w-48">
                       {product.description}
@@ -72,47 +100,86 @@ export function ProductTable({ products, onEdit, onDelete, canEdit, isAdmin }: P
                   )}
                 </div>
               </TableCell>
-              <TableCell>{typeLabels[product.product_type]}</TableCell>
               <TableCell>
-                <Badge className={lifecycleColors[product.lifecycle_stage]}>
-                  {product.lifecycle_stage}
-                </Badge>
+                <InlineEditCell
+                  value={product.product_type}
+                  displayValue={typeLabels[product.product_type]}
+                  onSave={(value) => onUpdate(product.id, 'product_type', value)}
+                  type="select"
+                  options={typeOptions}
+                  canEdit={canEdit}
+                />
               </TableCell>
               <TableCell>
-                <Badge className={priorityColors[product.strategic_priority]}>
-                  {product.strategic_priority}
-                </Badge>
+                {canEdit ? (
+                  <InlineEditCell
+                    value={product.lifecycle_stage}
+                    displayValue={product.lifecycle_stage}
+                    onSave={(value) => onUpdate(product.id, 'lifecycle_stage', value)}
+                    type="select"
+                    options={lifecycleOptions}
+                    canEdit={canEdit}
+                    className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${lifecycleColors[product.lifecycle_stage]}`}
+                  />
+                ) : (
+                  <Badge className={lifecycleColors[product.lifecycle_stage]}>
+                    {product.lifecycle_stage}
+                  </Badge>
+                )}
               </TableCell>
-              <TableCell>{product.business_owner || '-'}</TableCell>
-              <TableCell>{product.tech_owner || '-'}</TableCell>
               <TableCell>
-                <Badge variant={product.is_active ? 'default' : 'secondary'}>
+                {canEdit ? (
+                  <InlineEditCell
+                    value={product.strategic_priority}
+                    displayValue={product.strategic_priority}
+                    onSave={(value) => onUpdate(product.id, 'strategic_priority', value)}
+                    type="select"
+                    options={priorityOptions}
+                    canEdit={canEdit}
+                    className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${priorityColors[product.strategic_priority]}`}
+                  />
+                ) : (
+                  <Badge className={priorityColors[product.strategic_priority]}>
+                    {product.strategic_priority}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell>
+                <InlineEditCell
+                  value={product.business_owner || ''}
+                  onSave={(value) => onUpdate(product.id, 'business_owner', value)}
+                  canEdit={canEdit}
+                />
+              </TableCell>
+              <TableCell>
+                <InlineEditCell
+                  value={product.tech_owner || ''}
+                  onSave={(value) => onUpdate(product.id, 'tech_owner', value)}
+                  canEdit={canEdit}
+                />
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  variant={product.is_active ? 'default' : 'secondary'}
+                  className={canEdit ? 'cursor-pointer' : ''}
+                  onClick={canEdit ? () => onUpdate(product.id, 'is_active', !product.is_active) : undefined}
+                  title={canEdit ? 'Click to toggle' : undefined}
+                >
                   {product.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {format(new Date(product.created_at), 'MMM d, yyyy')}
               </TableCell>
-              {canEdit && (
+              {isAdmin && (
                 <TableCell>
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => onEdit(product)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {isAdmin && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => onDelete(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => onDelete(product.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               )}
             </TableRow>
