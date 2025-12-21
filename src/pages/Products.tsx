@@ -5,14 +5,16 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, Upload, Download, List, LayoutGrid } from 'lucide-react';
 import { ProductDialog } from '@/components/products/ProductDialog';
-import { CSVImportDialog } from '@/components/import/CSVImportDialog';
+import { ProductTable } from '@/components/products/ProductTable';
+import { CSVImportDialog, DuplicateInfo } from '@/components/import/CSVImportDialog';
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { exportProductsToCSV, PRODUCTS_SAMPLE_CSV } from '@/utils/csvExport';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useQueryClient } from '@tanstack/react-query';
 
 const sortOptions: SortOption[] = [
@@ -57,23 +60,54 @@ export default function Products() {
   const [sortBy, setSortBy] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
 
   const validProductTypes = ['internal', 'external', 'client', 'rnd'];
   const validLifecycleStages = ['ideation', 'build', 'live', 'scale', 'maintenance', 'sunset'];
   const validPriorities = ['high', 'medium', 'low'];
 
-  const handleImportProducts = async (data: Record<string, string>[]): Promise<{ success: number; errors: string[] }> => {
+  const checkDuplicates = async (data: Record<string, string>[]): Promise<DuplicateInfo[]> => {
+    const duplicates: DuplicateInfo[] = [];
+    
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const name = row.name?.trim().toLowerCase();
+      
+      if (name) {
+        const existing = products?.find(p => p.name.toLowerCase() === name);
+        if (existing) {
+          duplicates.push({
+            rowNum: i + 2,
+            identifier: row.name,
+            existingId: existing.id
+          });
+        }
+      }
+    }
+    
+    return duplicates;
+  };
+
+  const handleImportProducts = async (data: Record<string, string>[], skipDuplicates: boolean): Promise<{ success: number; errors: string[] }> => {
     setIsImporting(true);
     const errors: string[] = [];
     let success = 0;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const rowNum = i + 2; // +2 because of 0-index and header row
+      const rowNum = i + 2;
 
       if (!row.name?.trim()) {
         errors.push(`Row ${rowNum}: Name is required`);
         continue;
+      }
+
+      // Check for duplicate
+      if (skipDuplicates) {
+        const existing = products?.find(p => p.name.toLowerCase() === row.name.trim().toLowerCase());
+        if (existing) {
+          continue; // Skip this row
+        }
       }
 
       const productType = row.product_type?.toLowerCase() || 'internal';
@@ -120,6 +154,15 @@ export default function Products() {
     }
 
     return { success, errors };
+  };
+
+  const handleExport = () => {
+    if (!products || products.length === 0) {
+      toast.error('No products to export');
+      return;
+    }
+    exportProductsToCSV(products);
+    toast.success(`Exported ${products.length} product(s)`);
   };
 
   const handleCreate = (data: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
@@ -241,60 +284,76 @@ export default function Products() {
               Manage your product portfolio
             </p>
           </div>
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Import CSV
-              </Button>
-              <Button onClick={() => { setEditingProduct(null); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={!products?.length}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            {canEdit && (
+              <>
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import CSV
+                </Button>
+                <Button onClick={() => { setEditingProduct(null); setDialogOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Button>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 items-center">
-          <SearchFilter
-            value={search}
-            onChange={setSearch}
-            placeholder="Search products..."
-          />
-          <div className="flex gap-2 items-center">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={lifecycleFilter} onValueChange={setLifecycleFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Lifecycle" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stages</SelectItem>
-                <SelectItem value="ideation">Ideation</SelectItem>
-                <SelectItem value="build">Build</SelectItem>
-                <SelectItem value="live">Live</SelectItem>
-                <SelectItem value="scale">Scale</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="sunset">Sunset</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <SortButton
-              options={sortOptions}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSort={handleSort}
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <div className="flex flex-wrap gap-4 items-center">
+            <SearchFilter
+              value={search}
+              onChange={setSearch}
+              placeholder="Search products..."
             />
+            <div className="flex gap-2 items-center">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={lifecycleFilter} onValueChange={setLifecycleFilter}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Lifecycle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Stages</SelectItem>
+                  <SelectItem value="ideation">Ideation</SelectItem>
+                  <SelectItem value="build">Build</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="scale">Scale</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                  <SelectItem value="sunset">Sunset</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="low">Low</SelectItem>
+                </SelectContent>
+              </Select>
+              <SortButton
+                options={sortOptions}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+              />
+            </div>
           </div>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(v) => v && setViewMode(v as 'card' | 'table')}>
+            <ToggleGroupItem value="card" aria-label="Card view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Table view">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         {filteredProducts.length === 0 ? (
@@ -311,6 +370,14 @@ export default function Products() {
               )}
             </CardContent>
           </Card>
+        ) : viewMode === 'table' ? (
+          <ProductTable
+            products={filteredProducts}
+            onEdit={(product) => { setEditingProduct(product); setDialogOpen(true); }}
+            onDelete={(id) => setDeleteId(id)}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredProducts.map((product) => (
@@ -385,9 +452,10 @@ export default function Products() {
           onOpenChange={setImportDialogOpen}
           title="Import Products"
           description="Upload a CSV file to import multiple products at once. The CSV should have columns: name, description, product_type, lifecycle_stage, strategic_priority, business_owner, tech_owner."
-          sampleCsvUrl="/samples/products-sample.csv"
+          sampleCsvContent={PRODUCTS_SAMPLE_CSV}
           sampleFileName="products-sample.csv"
           onImport={handleImportProducts}
+          checkDuplicates={checkDuplicates}
           isLoading={isImporting}
         />
 

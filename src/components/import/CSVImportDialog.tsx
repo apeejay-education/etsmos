@@ -3,16 +3,24 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, AlertCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+
+export interface DuplicateInfo {
+  rowNum: number;
+  identifier: string;
+  existingId: string;
+}
 
 interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  sampleCsvUrl: string;
+  sampleCsvContent: string;
   sampleFileName: string;
-  onImport: (data: Record<string, string>[]) => Promise<{ success: number; errors: string[] }>;
+  onImport: (data: Record<string, string>[], skipDuplicates: boolean) => Promise<{ success: number; errors: string[]; duplicates?: DuplicateInfo[] }>;
+  checkDuplicates?: (data: Record<string, string>[]) => Promise<DuplicateInfo[]>;
   isLoading?: boolean;
 }
 
@@ -21,14 +29,17 @@ export function CSVImportDialog({
   onOpenChange,
   title,
   description,
-  sampleCsvUrl,
+  sampleCsvContent,
   sampleFileName,
   onImport,
+  checkDuplicates,
   isLoading = false
 }: CSVImportDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
-  const [result, setResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const [result, setResult] = useState<{ success: number; errors: string[]; duplicates?: DuplicateInfo[] } | null>(null);
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const parseCSV = (text: string): Record<string, string>[] => {
@@ -50,7 +61,7 @@ export function CSVImportDialog({
     return rows;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
@@ -61,12 +72,19 @@ export function CSVImportDialog({
 
     setFile(selectedFile);
     setResult(null);
+    setDuplicates([]);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const text = event.target?.result as string;
       const parsed = parseCSV(text);
       setPreview(parsed);
+
+      // Check for duplicates if the function is provided
+      if (checkDuplicates && parsed.length > 0) {
+        const foundDuplicates = await checkDuplicates(parsed);
+        setDuplicates(foundDuplicates);
+      }
     };
     reader.readAsText(selectedFile);
   };
@@ -74,7 +92,7 @@ export function CSVImportDialog({
   const handleImport = async () => {
     if (preview.length === 0) return;
 
-    const importResult = await onImport(preview);
+    const importResult = await onImport(preview, skipDuplicates);
     setResult(importResult);
 
     if (importResult.errors.length === 0) {
@@ -88,11 +106,27 @@ export function CSVImportDialog({
     setFile(null);
     setPreview([]);
     setResult(null);
+    setDuplicates([]);
+    setSkipDuplicates(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
     onOpenChange(false);
   };
+
+  const handleDownloadSample = () => {
+    const blob = new Blob([sampleCsvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = sampleFileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const newRecordsCount = preview.length - duplicates.length;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -107,14 +141,15 @@ export function CSVImportDialog({
 
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <a
-              href={sampleCsvUrl}
-              download={sampleFileName}
-              className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDownloadSample}
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline p-0 h-auto"
             >
               <Download className="h-4 w-4" />
               Download Sample CSV
-            </a>
+            </Button>
           </div>
 
           <div className="border-2 border-dashed rounded-lg p-6 text-center">
@@ -174,6 +209,37 @@ export function CSVImportDialog({
             </div>
           )}
 
+          {duplicates.length > 0 && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    {duplicates.length} duplicate(s) found:
+                  </p>
+                  <ul className="list-disc list-inside text-sm">
+                    {duplicates.slice(0, 3).map((dup, i) => (
+                      <li key={i}>Row {dup.rowNum}: "{dup.identifier}" already exists</li>
+                    ))}
+                    {duplicates.length > 3 && (
+                      <li>...and {duplicates.length - 3} more duplicates</li>
+                    )}
+                  </ul>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Checkbox
+                      id="skip-duplicates"
+                      checked={skipDuplicates}
+                      onCheckedChange={(checked) => setSkipDuplicates(checked === true)}
+                    />
+                    <label htmlFor="skip-duplicates" className="text-sm cursor-pointer">
+                      Skip duplicates and import only new records ({newRecordsCount} new)
+                    </label>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {result && (
             <Alert variant={result.errors.length > 0 ? 'destructive' : 'default'}>
               {result.errors.length > 0 ? (
@@ -208,9 +274,9 @@ export function CSVImportDialog({
           </Button>
           <Button
             onClick={handleImport}
-            disabled={preview.length === 0 || isLoading}
+            disabled={preview.length === 0 || isLoading || (skipDuplicates && newRecordsCount === 0)}
           >
-            {isLoading ? 'Importing...' : `Import ${preview.length} Record(s)`}
+            {isLoading ? 'Importing...' : `Import ${skipDuplicates ? newRecordsCount : preview.length} Record(s)`}
           </Button>
         </DialogFooter>
       </DialogContent>
