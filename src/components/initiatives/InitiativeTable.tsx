@@ -57,6 +57,7 @@ export function InitiativeTable({ initiatives, onEdit, onDelete, canEdit, isAdmi
             <TableHead>Sensitivity</TableHead>
             <TableHead>Owner</TableHead>
             <TableHead>Target Window</TableHead>
+            <TableHead>Target Date</TableHead>
             <TableHead>Approval Date</TableHead>
             <TableHead>Delivery Date</TableHead>
             {canEdit && <TableHead className="w-24">Actions</TableHead>}
@@ -93,6 +94,12 @@ export function InitiativeTable({ initiatives, onEdit, onDelete, canEdit, isAdmi
               </TableCell>
               <TableCell>{initiative.accountable_owner || '-'}</TableCell>
               <TableCell className="capitalize">{initiative.target_delivery_window}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {initiative.tentative_delivery_date 
+                  ? format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')
+                  : '-'
+                }
+              </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {initiative.approval_date 
                   ? format(new Date(initiative.approval_date), 'MMM d, yyyy')
