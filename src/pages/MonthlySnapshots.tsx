@@ -172,18 +172,14 @@ export default function MonthlySnapshots() {
                             {format(new Date(snapshot.month_year), 'MMMM yyyy')}
                           </CardTitle>
                           <div className="flex gap-2 ml-4">
-                            {delivered.length > 0 && (
-                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                {delivered.length} Delivered
-                              </Badge>
-                            )}
-                            {approved.length > 0 && (
-                              <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
-                                <Rocket className="h-3 w-3 mr-1" />
-                                {approved.length} Approved
-                              </Badge>
-                            )}
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+                              <Rocket className="h-3 w-3 mr-1" />
+                              {approved.length} Approved
+                            </Badge>
+                            <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              {delivered.length} Delivered
+                            </Badge>
                           </div>
                         </CollapsibleTrigger>
                         {canEdit && (
