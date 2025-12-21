@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { format, startOfMonth } from 'date-fns';
 import {
   Dialog,
@@ -20,14 +22,17 @@ interface SnapshotDialogProps {
   snapshot?: MonthlySnapshot | null;
 }
 
-interface FormData {
-  month_year: string;
-  summary: string;
-  key_deliveries: string;
-  blockers_faced: string;
-  lessons_learned: string;
-  next_month_focus: string;
-}
+// Zod validation schema with proper length constraints
+const snapshotSchema = z.object({
+  month_year: z.string().min(1, 'Month is required'),
+  summary: z.string().max(2000, 'Summary must be less than 2000 characters').or(z.literal('')),
+  key_deliveries: z.string().max(2000, 'Key deliveries must be less than 2000 characters').or(z.literal('')),
+  blockers_faced: z.string().max(1000, 'Blockers must be less than 1000 characters').or(z.literal('')),
+  lessons_learned: z.string().max(1000, 'Lessons learned must be less than 1000 characters').or(z.literal('')),
+  next_month_focus: z.string().max(1000, 'Next month focus must be less than 1000 characters').or(z.literal('')),
+});
+
+type FormData = z.infer<typeof snapshotSchema>;
 
 export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogProps) {
   const { user } = useAuth();
@@ -35,6 +40,7 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
   const isEditing = !!snapshot;
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(snapshotSchema),
     defaultValues: {
       month_year: format(startOfMonth(new Date()), 'yyyy-MM'),
       summary: '',
@@ -72,11 +78,11 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
     
     const snapshotData: MonthlySnapshotInsert = {
       month_year: monthDate,
-      summary: data.summary || null,
-      key_deliveries: data.key_deliveries || null,
-      blockers_faced: data.blockers_faced || null,
-      lessons_learned: data.lessons_learned || null,
-      next_month_focus: data.next_month_focus || null,
+      summary: data.summary?.trim() || null,
+      key_deliveries: data.key_deliveries?.trim() || null,
+      blockers_faced: data.blockers_faced?.trim() || null,
+      lessons_learned: data.lessons_learned?.trim() || null,
+      next_month_focus: data.next_month_focus?.trim() || null,
       created_by: user?.id || null,
     };
 
@@ -102,7 +108,7 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
             <Input
               id="month_year"
               type="month"
-              {...register('month_year', { required: 'Month is required' })}
+              {...register('month_year')}
             />
             {errors.month_year && (
               <p className="text-sm text-destructive mt-1">{errors.month_year.message}</p>
@@ -115,8 +121,12 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
               id="summary"
               placeholder="High-level summary of the month..."
               rows={3}
+              maxLength={2000}
               {...register('summary')}
             />
+            {errors.summary && (
+              <p className="text-sm text-destructive mt-1">{errors.summary.message}</p>
+            )}
           </div>
 
           <div>
@@ -125,8 +135,12 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
               id="key_deliveries"
               placeholder="What was delivered this month..."
               rows={4}
+              maxLength={2000}
               {...register('key_deliveries')}
             />
+            {errors.key_deliveries && (
+              <p className="text-sm text-destructive mt-1">{errors.key_deliveries.message}</p>
+            )}
           </div>
 
           <div>
@@ -135,8 +149,12 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
               id="blockers_faced"
               placeholder="Challenges and blockers encountered..."
               rows={3}
+              maxLength={1000}
               {...register('blockers_faced')}
             />
+            {errors.blockers_faced && (
+              <p className="text-sm text-destructive mt-1">{errors.blockers_faced.message}</p>
+            )}
           </div>
 
           <div>
@@ -145,8 +163,12 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
               id="lessons_learned"
               placeholder="Key takeaways and learnings..."
               rows={3}
+              maxLength={1000}
               {...register('lessons_learned')}
             />
+            {errors.lessons_learned && (
+              <p className="text-sm text-destructive mt-1">{errors.lessons_learned.message}</p>
+            )}
           </div>
 
           <div>
@@ -155,8 +177,12 @@ export function SnapshotDialog({ open, onOpenChange, snapshot }: SnapshotDialogP
               id="next_month_focus"
               placeholder="Priorities for the upcoming month..."
               rows={3}
+              maxLength={1000}
               {...register('next_month_focus')}
             />
+            {errors.next_month_focus && (
+              <p className="text-sm text-destructive mt-1">{errors.next_month_focus.message}</p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

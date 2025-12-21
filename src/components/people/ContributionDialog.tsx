@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -29,14 +31,17 @@ interface ContributionDialogProps {
   defaultInitiativeId?: string;
 }
 
-interface FormData {
-  person_id: string;
-  initiative_id: string;
-  contribution_role: ContributionRole;
-  contribution_summary: string;
-  performance_rating: PerformanceRating | '';
-  assessment_notes: string;
-}
+// Zod validation schema with proper constraints
+const contributionSchema = z.object({
+  person_id: z.string().uuid('Please select a person'),
+  initiative_id: z.string().uuid('Please select an initiative'),
+  contribution_role: z.enum(['lead', 'contributor', 'reviewer', 'advisor']),
+  contribution_summary: z.string().max(2000, 'Summary must be less than 2000 characters').or(z.literal('')),
+  performance_rating: z.enum(['exceptional', 'strong', 'meets_expectations', 'needs_improvement']).or(z.literal('')),
+  assessment_notes: z.string().max(1000, 'Notes must be less than 1000 characters').or(z.literal('')),
+});
+
+type FormData = z.infer<typeof contributionSchema>;
 
 const roleOptions: { value: ContributionRole; label: string }[] = [
   { value: 'lead', label: 'Lead' },
@@ -66,6 +71,7 @@ export function ContributionDialog({
   const isEditing = !!contribution;
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(contributionSchema),
     defaultValues: {
       person_id: defaultPersonId || '',
       initiative_id: defaultInitiativeId || '',
@@ -108,9 +114,9 @@ export function ContributionDialog({
       person_id: data.person_id,
       initiative_id: data.initiative_id,
       contribution_role: data.contribution_role,
-      contribution_summary: data.contribution_summary || null,
+      contribution_summary: data.contribution_summary?.trim() || null,
       performance_rating: data.performance_rating || null,
-      assessment_notes: data.assessment_notes || null,
+      assessment_notes: data.assessment_notes?.trim() || null,
       assessed_by: data.performance_rating ? user?.id || null : null,
       assessed_at: data.performance_rating ? new Date().toISOString() : null,
     };
@@ -206,8 +212,12 @@ export function ContributionDialog({
               id="contribution_summary"
               placeholder="Describe the person's contribution..."
               rows={3}
+              maxLength={2000}
               {...register('contribution_summary')}
             />
+            {errors.contribution_summary && (
+              <p className="text-sm text-destructive mt-1">{errors.contribution_summary.message}</p>
+            )}
           </div>
 
           <div>
@@ -235,8 +245,12 @@ export function ContributionDialog({
               id="assessment_notes"
               placeholder="Additional assessment notes..."
               rows={2}
+              maxLength={1000}
               {...register('assessment_notes')}
             />
+            {errors.assessment_notes && (
+              <p className="text-sm text-destructive mt-1">{errors.assessment_notes.message}</p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
