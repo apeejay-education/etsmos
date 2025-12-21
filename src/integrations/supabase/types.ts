@@ -184,6 +184,7 @@ export type Database = {
             | Database["public"]["Enums"]["strategic_category"]
             | null
           target_delivery_window: Database["public"]["Enums"]["delivery_window"]
+          tentative_delivery_date: string | null
           title: string
           updated_at: string
         }
@@ -212,6 +213,7 @@ export type Database = {
             | Database["public"]["Enums"]["strategic_category"]
             | null
           target_delivery_window?: Database["public"]["Enums"]["delivery_window"]
+          tentative_delivery_date?: string | null
           title: string
           updated_at?: string
         }
@@ -240,6 +242,7 @@ export type Database = {
             | Database["public"]["Enums"]["strategic_category"]
             | null
           target_delivery_window?: Database["public"]["Enums"]["delivery_window"]
+          tentative_delivery_date?: string | null
           title?: string
           updated_at?: string
         }

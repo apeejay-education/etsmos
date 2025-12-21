@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays, startOfMonth, endOfMonth } from 'date-fns';
+import { isInitiativeAtRisk, isUpcomingLaunch } from '@/utils/deliveryWindowCalculator';
 
 export interface DashboardStats {
   openInitiatives: number;
@@ -10,6 +11,8 @@ export interface DashboardStats {
   deliveredThisMonth: number;
   redAmberSignals: number;
   silentInitiatives: number;
+  upcomingLaunches: number;
+  atRiskInitiatives: number;
 }
 
 export interface DashboardInitiative {
@@ -19,6 +22,7 @@ export interface DashboardInitiative {
   priority_level: string;
   sensitivity_level: string;
   approval_date: string | null;
+  tentative_delivery_date: string | null;
   created_at: string;
   products: { name: string } | null;
   execution_signals: {
@@ -45,6 +49,7 @@ export function useDashboard() {
           priority_level,
           sensitivity_level,
           approval_date,
+          tentative_delivery_date,
           actual_delivery_date,
           created_at,
           products(name),
@@ -98,6 +103,25 @@ export function useDashboard() {
         return differenceInDays(now, new Date(signal.last_management_touch)) > 14;
       }).length;
 
+      // Upcoming launches (in_progress with delivery within 10 business days)
+      const upcomingLaunches = typedInitiatives.filter(i => 
+        isUpcomingLaunch(i.status, i.tentative_delivery_date)
+      ).length;
+
+      // At risk (blocked or approved with delivery within 10 business days)
+      const atRiskInitiatives = typedInitiatives.filter(i =>
+        isInitiativeAtRisk(i.status, i.tentative_delivery_date)
+      ).length;
+
+      // Get the actual upcoming and at-risk initiatives for display
+      const upcomingLaunchList = typedInitiatives.filter(i => 
+        isUpcomingLaunch(i.status, i.tentative_delivery_date)
+      );
+
+      const atRiskList = typedInitiatives.filter(i =>
+        isInitiativeAtRisk(i.status, i.tentative_delivery_date)
+      );
+
       const stats: DashboardStats = {
         openInitiatives: openInitiatives.length,
         highSensitivityOpen,
@@ -105,12 +129,16 @@ export function useDashboard() {
         agingInitiatives,
         deliveredThisMonth,
         redAmberSignals,
-        silentInitiatives
+        silentInitiatives,
+        upcomingLaunches,
+        atRiskInitiatives
       };
 
       return {
         stats,
-        recentInitiatives: typedInitiatives.slice(0, 10)
+        recentInitiatives: typedInitiatives.slice(0, 10),
+        upcomingLaunchList,
+        atRiskList
       };
     }
   });

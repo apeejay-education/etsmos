@@ -58,6 +58,7 @@ export interface Initiative {
   escalation_owner: string | null;
   status: InitiativeStatus;
   target_delivery_window: DeliveryWindow;
+  tentative_delivery_date: string | null;
   actual_delivery_date: string | null;
   delivered_outcome_summary: string | null;
   outcome_vs_intent: OutcomeMatch | null;
