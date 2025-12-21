@@ -574,7 +574,11 @@ export default function Initiatives() {
                             <span className="font-medium">Window:</span> {initiative.target_delivery_window}
                           </span>
                           {initiative.tentative_delivery_date && (
-                            <span>
+                            <span className={
+                              new Date(initiative.tentative_delivery_date) < new Date() && initiative.status !== 'delivered' && initiative.status !== 'dropped'
+                                ? 'text-destructive font-medium'
+                                : ''
+                            }>
                               <span className="font-medium">Target:</span> {format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')}
                             </span>
                           )}

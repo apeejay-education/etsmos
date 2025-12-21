@@ -190,7 +190,11 @@ export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange
                           )}
                         </div>
                         {initiative.tentative_delivery_date && (
-                          <p className="text-[10px] text-muted-foreground">
+                          <p className={`text-[10px] ${
+                            new Date(initiative.tentative_delivery_date) < new Date() && initiative.status !== 'delivered' && initiative.status !== 'dropped'
+                              ? 'text-destructive font-medium'
+                              : 'text-muted-foreground'
+                          }`}>
                             Due: {format(new Date(initiative.tentative_delivery_date), 'MMM d, yyyy')}
                           </p>
                         )}
