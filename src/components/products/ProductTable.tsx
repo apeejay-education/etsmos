@@ -79,7 +79,6 @@ export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, is
             <TableHead>Business Owner</TableHead>
             <TableHead>Tech Owner</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
             {isAdmin && <TableHead className="w-16">Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -167,9 +166,6 @@ export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, is
                 >
                   {product.is_active ? 'Active' : 'Inactive'}
                 </Badge>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {format(new Date(product.created_at), 'MMM d, yyyy')}
               </TableCell>
               {isAdmin && (
                 <TableCell>
