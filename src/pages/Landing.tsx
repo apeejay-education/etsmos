@@ -1,66 +1,43 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  BarChart3, 
-  Target, 
-  Users, 
-  Shield, 
-  TrendingUp, 
-  CheckCircle,
-  ArrowRight,
-  Heart
-} from 'lucide-react';
+import { BarChart3, Target, Users, Shield, TrendingUp, CheckCircle, ArrowRight, Heart } from 'lucide-react';
 import apeejayLogo from '@/assets/apeejay-logo.png';
-
 const Landing = () => {
-  const features = [
-    {
-      icon: Target,
-      title: 'Initiative Tracking',
-      description: 'Monitor strategic initiatives from approval to delivery with full visibility.'
-    },
-    {
-      icon: BarChart3,
-      title: 'Execution Signals',
-      description: 'Real-time health indicators and risk assessments for all active projects.'
-    },
-    {
-      icon: Users,
-      title: 'People & Contributions',
-      description: 'Track team contributions and performance across initiatives.'
-    },
-    {
-      icon: Shield,
-      title: 'Audit Trail',
-      description: 'Complete audit logging for compliance and accountability.'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Analytics Dashboard',
-      description: 'Comprehensive dashboards with actionable insights and trends.'
-    },
-    {
-      icon: CheckCircle,
-      title: 'Monthly Snapshots',
-      description: 'Structured monthly reviews capturing key deliveries and lessons learned.'
-    }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+  const features = [{
+    icon: Target,
+    title: 'Initiative Tracking',
+    description: 'Monitor strategic initiatives from approval to delivery with full visibility.'
+  }, {
+    icon: BarChart3,
+    title: 'Execution Signals',
+    description: 'Real-time health indicators and risk assessments for all active projects.'
+  }, {
+    icon: Users,
+    title: 'People & Contributions',
+    description: 'Track team contributions and performance across initiatives.'
+  }, {
+    icon: Shield,
+    title: 'Audit Trail',
+    description: 'Complete audit logging for compliance and accountability.'
+  }, {
+    icon: TrendingUp,
+    title: 'Analytics Dashboard',
+    description: 'Comprehensive dashboards with actionable insights and trends.'
+  }, {
+    icon: CheckCircle,
+    title: 'Monthly Snapshots',
+    description: 'Structured monthly reviews capturing key deliveries and lessons learned.'
+  }];
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img 
-              src={apeejayLogo} 
-              alt="Apeejay Education Logo" 
-              className="h-12 w-12 object-contain"
-            />
+            <img src={apeejayLogo} alt="Apeejay Education Logo" className="h-12 w-12 object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-foreground">Apeejay ETS</h1>
-              <p className="text-xs text-muted-foreground">Management OS</p>
+              <h1 className="text-xl font-bold text-foreground">ETS / Cadence</h1>
+              <p className="text-xs text-muted-foreground">Initiative Tracking System</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -78,11 +55,7 @@ const Landing = () => {
       <section className="container mx-auto px-4 py-20 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-center mb-8">
-            <img 
-              src={apeejayLogo} 
-              alt="Apeejay Education Logo" 
-              className="h-24 w-24 object-contain"
-            />
+            <img src={apeejayLogo} alt="Apeejay Education Logo" className="h-24 w-24 object-contain" />
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-6">
             Apeejay ETS
@@ -120,8 +93,7 @@ const Landing = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature) => (
-            <Card key={feature.title} className="border bg-card hover:shadow-lg transition-shadow">
+          {features.map(feature => <Card key={feature.title} className="border bg-card hover:shadow-lg transition-shadow">
               <CardContent className="p-6">
                 <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                   <feature.icon className="h-6 w-6 text-primary" />
@@ -133,8 +105,7 @@ const Landing = () => {
                   {feature.description}
                 </p>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
       </section>
 
@@ -162,11 +133,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-3">
-              <img 
-                src={apeejayLogo} 
-                alt="Apeejay Education Logo" 
-                className="h-8 w-8 object-contain"
-              />
+              <img src={apeejayLogo} alt="Apeejay Education Logo" className="h-8 w-8 object-contain" />
               <span className="font-semibold text-foreground">Apeejay ETS Management OS</span>
             </div>
             <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -175,8 +142,6 @@ const Landing = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
