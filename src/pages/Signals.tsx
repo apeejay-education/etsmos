@@ -133,9 +133,9 @@ export default function Signals() {
                           </Badge>}
                       </div>
 
-                      {signal.risk_blocker_summary && <div className="mt-3 p-3 rounded-lg bg-red-500 text-secondary-foreground">
+                      {signal.risk_blocker_summary && <div className="mt-3 p-3 rounded-lg text-secondary-foreground bg-[sidebar-primary-foreground] bg-red-100">
                           <p className="text-sm font-medium">Risks / Blockers</p>
-                          <p className="text-sm text-accent">
+                          <p className="text-sm text-slate-700">
                             {signal.risk_blocker_summary}
                           </p>
                         </div>}
