@@ -32,6 +32,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateDeliveryWindow, formatDeliveryWindow } from '@/utils/deliveryWindowCalculator';
 import { InitiativeTeamManager } from './InitiativeTeamManager';
+import { InitiativeChat } from './InitiativeChat';
+import { useCurrentPersonContribution } from '@/hooks/useInitiativeAccess';
+import { useAuth } from '@/contexts/AuthContext';
 
 const initiativeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
@@ -75,6 +78,14 @@ export function InitiativeDialog({
   onSubmit, 
   isLoading 
 }: InitiativeDialogProps) {
+  const { canEdit: globalCanEdit } = useAuth();
+  const { data: currentContribution } = useCurrentPersonContribution(initiative?.id || null);
+  
+  // User can edit if they're admin/manager OR if they're a lead on this initiative
+  const isLead = currentContribution?.contribution_role === 'lead';
+  const canEditInitiative = globalCanEdit || isLead;
+  const isTaggedUser = !!currentContribution;
+  
   const form = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
     defaultValues: {
@@ -180,12 +191,15 @@ export function InitiativeDialog({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <Tabs defaultValue="core" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+            <Tabs defaultValue={initiative && isTaggedUser && !canEditInitiative ? "chat" : "core"} className="w-full">
+              <TabsList className={`grid w-full ${initiative && isTaggedUser ? 'grid-cols-5' : 'grid-cols-4'}`}>
                 <TabsTrigger value="core">Core</TabsTrigger>
                 <TabsTrigger value="approval">Approval</TabsTrigger>
                 <TabsTrigger value="delivery">Delivery</TabsTrigger>
                 <TabsTrigger value="team">Team</TabsTrigger>
+                {initiative && isTaggedUser && (
+                  <TabsTrigger value="chat">Chat</TabsTrigger>
+                )}
               </TabsList>
 
               <TabsContent value="core" className="space-y-4 mt-4">
@@ -622,15 +636,27 @@ export function InitiativeDialog({
               <TabsContent value="team" className="space-y-4 mt-4">
                 <InitiativeTeamManager initiativeId={initiative?.id || null} />
               </TabsContent>
+
+              {initiative && isTaggedUser && currentContribution && (
+                <TabsContent value="chat" className="space-y-4 mt-4">
+                  <InitiativeChat 
+                    initiativeId={initiative.id}
+                    personId={currentContribution.personId}
+                    personName={currentContribution.personName}
+                  />
+                </TabsContent>
+              )}
             </Tabs>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {canEditInitiative ? 'Cancel' : 'Close'}
               </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? 'Saving...' : (initiative ? 'Update' : 'Create')}
-              </Button>
+              {canEditInitiative && (
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? 'Saving...' : (initiative ? 'Update' : 'Create')}
+                </Button>
+              )}
             </div>
           </form>
         </Form>

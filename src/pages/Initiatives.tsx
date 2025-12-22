@@ -7,7 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload, Download, Columns3 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload, Download, Columns3, MessageCircle } from 'lucide-react';
 import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
 import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
 import { InitiativeTable } from '@/components/initiatives/InitiativeTable';
@@ -644,26 +644,26 @@ export default function Initiatives() {
                           </p>
                         )}
                       </div>
-                      {canEdit && (
-                        <div className="flex gap-1 ml-4">
+                      <div className="flex gap-1 ml-4">
+                        {/* Always show view button for all users to open dialog */}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => { setEditingInitiative(initiative); setDialogOpen(true); }}
+                          title={canEdit ? "Edit Initiative" : "View Initiative"}
+                        >
+                          {canEdit ? <Pencil className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
+                        </Button>
+                        {isAdmin && (
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => { setEditingInitiative(initiative); setDialogOpen(true); }}
+                            onClick={() => setDeleteId(initiative.id)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                          {isAdmin && (
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => setDeleteId(initiative.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
