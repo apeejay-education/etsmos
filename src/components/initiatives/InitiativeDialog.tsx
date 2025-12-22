@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { calculateDeliveryWindow, formatDeliveryWindow } from '@/utils/deliveryWindowCalculator';
+import { InitiativeTeamManager } from './InitiativeTeamManager';
 
 const initiativeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
@@ -180,10 +181,11 @@ export function InitiativeDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <Tabs defaultValue="core" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="core">Core</TabsTrigger>
                 <TabsTrigger value="approval">Approval</TabsTrigger>
                 <TabsTrigger value="delivery">Delivery</TabsTrigger>
+                <TabsTrigger value="team">Team</TabsTrigger>
               </TabsList>
 
               <TabsContent value="core" className="space-y-4 mt-4">
@@ -615,6 +617,10 @@ export function InitiativeDialog({
                     </FormItem>
                   )}
                 />
+              </TabsContent>
+
+              <TabsContent value="team" className="space-y-4 mt-4">
+                <InitiativeTeamManager initiativeId={initiative?.id || null} />
               </TabsContent>
             </Tabs>
 
