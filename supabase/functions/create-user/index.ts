@@ -75,44 +75,119 @@ Deno.serve(async (req) => {
       )
     }
 
+    const emailNormalized = email.trim().toLowerCase();
+
+    const ensureViewerRole = async (userId: string) => {
+      const { data: existingRole, error: roleSelectError } = await adminClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (roleSelectError) {
+        console.warn('Could not check existing role:', roleSelectError);
+        return;
+      }
+
+      if (!existingRole) {
+        const { error: insertRoleError } = await adminClient
+          .from('user_roles')
+          .insert({ user_id: userId, role: 'viewer' });
+
+        if (insertRoleError) {
+          console.warn('Could not assign viewer role:', insertRoleError);
+        }
+      }
+    };
+
     // Create the auth user with service role
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email,
+      email: emailNormalized,
       password,
       email_confirm: true, // Auto-confirm email
-      user_metadata: { full_name }
-    })
+      user_metadata: { full_name },
+    });
 
-    if (authError) {
+    let finalUserId: string | null = authData?.user?.id ?? null;
+
+    // If user already exists, update their password instead of failing
+    if (authError && authError.message?.toLowerCase().includes('already') && authError.message?.toLowerCase().includes('registered')) {
+      console.log('User already exists, attempting to find and update password:', emailNormalized);
+
+      const { data: listData, error: listError } = await adminClient.auth.admin.listUsers();
+      if (listError) {
+        console.error('Failed to list users:', listError);
+        return new Response(
+          JSON.stringify({ error: 'User already exists, but could not fetch existing user record' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const existing = listData?.users?.find((u: any) => (u.email || '').toLowerCase() === emailNormalized);
+      if (!existing?.id) {
+        return new Response(
+          JSON.stringify({ error: 'A user with this email already exists, but could not find the user id' }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { error: updateAuthError } = await adminClient.auth.admin.updateUserById(existing.id, {
+        password,
+        user_metadata: { full_name },
+      });
+
+      if (updateAuthError) {
+        console.error('Failed to update existing user password:', updateAuthError);
+        return new Response(
+          JSON.stringify({ error: updateAuthError.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      finalUserId = existing.id;
+    } else if (authError) {
       return new Response(
         JSON.stringify({ error: authError.message }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // Link the person record to the new auth user and set must_reset_password
+    if (!finalUserId) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to resolve user id for created/updated account' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Ensure the user has at least a viewer role (existing users might not have one)
+    await ensureViewerRole(finalUserId);
+
+    // Link the person record to the auth user and set must_reset_password
     const { error: updateError } = await adminClient
       .from('people')
-      .update({ 
-        user_id: authData.user.id,
-        must_reset_password: true
+      .update({
+        user_id: finalUserId,
+        must_reset_password: true,
       })
-      .eq('id', person_id)
+      .eq('id', person_id);
 
     if (updateError) {
-      // Rollback: delete the created auth user
-      await adminClient.auth.admin.deleteUser(authData.user.id)
+      // Rollback only if we just created a new user
+      if (authData?.user?.id && authData.user.id === finalUserId) {
+        await adminClient.auth.admin.deleteUser(finalUserId);
+      }
+
       return new Response(
         JSON.stringify({ error: 'Failed to link user to person record' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        user_id: authData.user.id,
-        message: `User created. They can log in with email: ${email} and the provided password.`
+      JSON.stringify({
+        success: true,
+        user_id: finalUserId,
+        message: `User ready. They can log in with email: ${emailNormalized} and the provided password.`,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
