@@ -9,11 +9,13 @@ export interface Person {
   department: string | null;
   role_title: string | null;
   is_active: boolean;
+  user_id: string | null;
+  must_reset_password: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export type PersonInsert = Omit<Person, 'id' | 'created_at' | 'updated_at'>;
+export type PersonInsert = Omit<Person, 'id' | 'created_at' | 'updated_at' | 'user_id' | 'must_reset_password'>;
 export type PersonUpdate = Partial<PersonInsert>;
 
 export function usePeople() {
