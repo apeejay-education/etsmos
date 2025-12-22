@@ -58,11 +58,11 @@ export function PasswordResetPrompt({ open, personId }: PasswordResetPromptProps
 
       if (passwordError) throw passwordError;
 
-      // Clear the must_reset_password flag
+      // Clear the must_reset_password flag using user_id since RLS policy allows users to view own record
       const { error: updateError } = await supabase
         .from('people')
         .update({ must_reset_password: false })
-        .eq('id', personId);
+        .eq('user_id', user?.id);
 
       if (updateError) throw updateError;
 
@@ -71,7 +71,13 @@ export function PasswordResetPrompt({ open, personId }: PasswordResetPromptProps
         description: 'Your password has been changed successfully.',
       });
 
-      queryClient.invalidateQueries({ queryKey: ['current-person', user?.id] });
+      // Invalidate queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: ['current-person', user?.id] });
+      
+      // Force a small delay and refetch to ensure dialog closes
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['current-person', user?.id] });
+      }, 100);
     } catch (error: any) {
       toast({
         title: 'Error',
