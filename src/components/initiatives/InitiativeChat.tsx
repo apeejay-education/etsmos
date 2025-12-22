@@ -10,11 +10,12 @@ import { toast } from 'sonner';
 
 interface InitiativeChatProps {
   initiativeId: string;
-  personId: string;
-  personName: string;
+  personId: string | null;
+  personName: string | null;
+  canSendMessages: boolean;
 }
 
-export function InitiativeChat({ initiativeId, personId, personName }: InitiativeChatProps) {
+export function InitiativeChat({ initiativeId, personId, personName, canSendMessages }: InitiativeChatProps) {
   const [message, setMessage] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, sendMessage, deleteMessage } = useInitiativeChat(initiativeId);
@@ -26,8 +27,9 @@ export function InitiativeChat({ initiativeId, personId, personName }: Initiativ
     }
   }, [messages]);
 
-  const handleSend = async () => {
-    if (!message.trim()) return;
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!message.trim() || !personId) return;
     
     try {
       await sendMessage.mutateAsync({ message: message.trim(), personId });
@@ -110,22 +112,28 @@ export function InitiativeChat({ initiativeId, personId, personName }: Initiativ
         </div>
       </ScrollArea>
       
-      <div className="flex gap-2 mt-4 pt-4 border-t">
-        <Textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
-          className="min-h-[60px] resize-none"
-        />
-        <Button
-          onClick={handleSend}
-          disabled={!message.trim() || sendMessage.isPending}
-          className="shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
+      {canSendMessages && personId ? (
+        <form onSubmit={handleSend} className="flex gap-2 mt-4 pt-4 border-t">
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type a message..."
+            className="min-h-[60px] resize-none"
+          />
+          <Button
+            type="submit"
+            disabled={!message.trim() || sendMessage.isPending}
+            className="shrink-0"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      ) : (
+        <div className="mt-4 pt-4 border-t text-center text-sm text-muted-foreground">
+          {!personId ? 'Link your account to a person to participate in chat' : 'You can only view this chat'}
+        </div>
+      )}
     </div>
   );
 }
