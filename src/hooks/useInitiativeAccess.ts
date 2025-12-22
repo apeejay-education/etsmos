@@ -60,12 +60,13 @@ export function useCurrentPersonContribution(initiativeId: string | null) {
         .eq('person_id', person.id)
         .maybeSingle();
       
-      if (!contribution) return null;
-      
+      // Return person info even if no contribution (for admins/managers to chat)
       return {
-        ...contribution,
+        contribution,
         personId: person.id,
-        personName: person.full_name
+        personName: person.full_name,
+        isTagged: !!contribution,
+        contributionRole: contribution?.contribution_role || null
       };
     },
     enabled: !!initiativeId

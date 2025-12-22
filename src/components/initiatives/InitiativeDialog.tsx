@@ -79,12 +79,14 @@ export function InitiativeDialog({
   isLoading 
 }: InitiativeDialogProps) {
   const { canEdit: globalCanEdit } = useAuth();
-  const { data: currentContribution } = useCurrentPersonContribution(initiative?.id || null);
+  const { data: personData } = useCurrentPersonContribution(initiative?.id || null);
   
   // User can edit if they're admin/manager OR if they're a lead on this initiative
-  const isLead = currentContribution?.contribution_role === 'lead';
+  const isLead = personData?.contributionRole === 'lead';
   const canEditInitiative = globalCanEdit || isLead;
-  const isTaggedUser = !!currentContribution;
+  const isTaggedUser = personData?.isTagged ?? false;
+  // Show chat tab for all users who have a person linked (admins/managers/tagged users)
+  const canAccessChat = !!personData?.personId;
   
   const form = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
@@ -191,13 +193,13 @@ export function InitiativeDialog({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <Tabs defaultValue={initiative && isTaggedUser && !canEditInitiative ? "chat" : "core"} className="w-full">
-              <TabsList className={`grid w-full ${initiative && isTaggedUser ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <Tabs defaultValue={initiative && canAccessChat && !canEditInitiative ? "chat" : "core"} className="w-full">
+              <TabsList className={`grid w-full ${initiative && canAccessChat ? 'grid-cols-5' : 'grid-cols-4'}`}>
                 <TabsTrigger value="core">Core</TabsTrigger>
                 <TabsTrigger value="approval">Approval</TabsTrigger>
                 <TabsTrigger value="delivery">Delivery</TabsTrigger>
                 <TabsTrigger value="team">Team</TabsTrigger>
-                {initiative && isTaggedUser && (
+                {initiative && canAccessChat && (
                   <TabsTrigger value="chat">Chat</TabsTrigger>
                 )}
               </TabsList>
@@ -637,12 +639,13 @@ export function InitiativeDialog({
                 <InitiativeTeamManager initiativeId={initiative?.id || null} />
               </TabsContent>
 
-              {initiative && isTaggedUser && currentContribution && (
+              {initiative && canAccessChat && personData && (
                 <TabsContent value="chat" className="space-y-4 mt-4">
                   <InitiativeChat 
                     initiativeId={initiative.id}
-                    personId={currentContribution.personId}
-                    personName={currentContribution.personName}
+                    personId={personData.personId}
+                    personName={personData.personName}
+                    canSendMessages={isTaggedUser || globalCanEdit}
                   />
                 </TabsContent>
               )}
