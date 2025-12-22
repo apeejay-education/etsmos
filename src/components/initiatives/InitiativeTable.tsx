@@ -1,7 +1,7 @@
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, DeliveryWindow } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -91,7 +91,7 @@ export function InitiativeTable({ initiatives, onEdit, onDelete, onUpdate, canEd
             <TableHead>Target Date</TableHead>
             <TableHead>Approval Date</TableHead>
             <TableHead>Delivery Date</TableHead>
-            {isAdmin && <TableHead className="w-16">Actions</TableHead>}
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -225,17 +225,27 @@ export function InitiativeTable({ initiatives, onEdit, onDelete, onUpdate, canEd
                   canEdit={canEdit}
                 />
               </TableCell>
-              {isAdmin && (
-                <TableCell>
+              <TableCell>
+                <div className="flex gap-1">
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => onDelete(initiative.id)}
+                    onClick={() => onEdit(initiative)}
+                    title={canEdit ? "Edit Initiative" : "View Initiative"}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Eye className="h-4 w-4" />
                   </Button>
-                </TableCell>
-              )}
+                  {isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => onDelete(initiative.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

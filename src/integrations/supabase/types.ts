@@ -160,6 +160,45 @@ export type Database = {
           },
         ]
       }
+      initiative_chats: {
+        Row: {
+          created_at: string
+          id: string
+          initiative_id: string
+          message: string
+          person_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiative_id: string
+          message: string
+          person_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          message?: string
+          person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_chats_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_chats_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       initiatives: {
         Row: {
           accountable_owner: string | null
@@ -436,6 +475,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_initiative_lead: {
+        Args: { _initiative_id: string; _user_id: string }
         Returns: boolean
       }
       user_has_initiative_access: {

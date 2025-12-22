@@ -2,7 +2,7 @@ import { useState, DragEvent } from 'react';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, MessageCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { differenceInDays, format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -147,28 +147,27 @@ export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange
                             <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                           )}
                           <h4 className="font-medium text-sm line-clamp-2 flex-1">{initiative.title}</h4>
-                          {canEdit && (
-                            <div className="flex gap-0.5 shrink-0">
+                          <div className="flex gap-0.5 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => onEdit?.(initiative)}
+                              title={canEdit ? "Edit Initiative" : "View Initiative"}
+                            >
+                              {canEdit ? <Pencil className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            </Button>
+                            {isAdmin && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-6 w-6"
-                                onClick={() => onEdit?.(initiative)}
+                                onClick={() => onDelete?.(initiative.id)}
                               >
-                                <Pencil className="h-3 w-3" />
+                                <Trash2 className="h-3 w-3" />
                               </Button>
-                              {isAdmin && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  onClick={() => onDelete?.(initiative.id)}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-1">
                           {initiative.products?.name}
