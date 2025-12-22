@@ -190,7 +190,9 @@ export default function People() {
                           <CardTitle className="text-lg flex items-center gap-2">
                             {person.full_name}
                             {person.user_id && (
-                              <CheckCircle className="h-4 w-4 text-green-600" title="Has login" />
+                              <span title="Has login">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                              </span>
                             )}
                             {!person.is_active && (
                               <Badge variant="secondary">Inactive</Badge>
