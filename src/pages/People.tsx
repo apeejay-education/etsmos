@@ -32,6 +32,7 @@ import { useContributions, Contribution } from '@/hooks/useContributions';
 import { PersonDialog } from '@/components/people/PersonDialog';
 import { ContributionDialog } from '@/components/people/ContributionDialog';
 import { CreateUserDialog } from '@/components/people/CreateUserDialog';
+import { ResetPasswordDialog } from '@/components/people/ResetPasswordDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ratingColors: Record<string, string> = {
@@ -64,6 +65,7 @@ export default function People() {
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [contributionDialogOpen, setContributionDialogOpen] = useState(false);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [deletePersonId, setDeletePersonId] = useState<string | null>(null);
@@ -109,6 +111,11 @@ export default function People() {
   const handleCreateUser = (person: Person) => {
     setSelectedPerson(person);
     setCreateUserDialogOpen(true);
+  };
+
+  const handleResetPassword = (person: Person) => {
+    setSelectedPerson(person);
+    setResetPasswordDialogOpen(true);
   };
 
   const handleDeletePerson = async () => {
@@ -215,8 +222,19 @@ export default function People() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleCreateUser(person)}
+                                title="Create Login"
                               >
                                 <UserPlus className="h-4 w-4 text-primary" />
+                              </Button>
+                            )}
+                            {isAdmin && person.user_id && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleResetPassword(person)}
+                                title="Reset Password"
+                              >
+                                <KeyRound className="h-4 w-4 text-orange-500" />
                               </Button>
                             )}
                             <Button
@@ -328,6 +346,14 @@ export default function People() {
         <CreateUserDialog
           open={createUserDialogOpen}
           onOpenChange={setCreateUserDialogOpen}
+          person={selectedPerson}
+        />
+      )}
+
+      {selectedPerson && (
+        <ResetPasswordDialog
+          open={resetPasswordDialogOpen}
+          onOpenChange={setResetPasswordDialogOpen}
           person={selectedPerson}
         />
       )}
