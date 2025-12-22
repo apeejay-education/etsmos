@@ -22,14 +22,33 @@ import { DeliveryTrendsChart } from '@/components/dashboard/DeliveryTrendsChart'
 import { HealthDistributionChart } from '@/components/dashboard/HealthDistributionChart';
 import { ContributionStatsChart } from '@/components/dashboard/ContributionStatsChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
+import { UserDashboard } from '@/components/dashboard/UserDashboard';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
   const { data, isLoading } = useDashboard();
   const { data: analyticsData, isLoading: analyticsLoading } = useAnalytics();
   const { data: alerts, isLoading: alertsLoading } = useAlerts();
+
+  // Show personalized dashboard for viewers
+  if (isViewer) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">My Dashboard</h1>
+            <p className="text-muted-foreground">Your initiatives, contributions, and upcoming deadlines</p>
+          </div>
+          <UserDashboard />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (isLoading) {
     return (

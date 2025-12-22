@@ -303,8 +303,10 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          must_reset_password: boolean
           role_title: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -313,8 +315,10 @@ export type Database = {
           full_name: string
           id?: string
           is_active?: boolean
+          must_reset_password?: boolean
           role_title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -323,8 +327,10 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean
+          must_reset_password?: boolean
           role_title?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -420,6 +426,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_current_person_id: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -429,6 +436,14 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      user_has_initiative_access: {
+        Args: { _initiative_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_has_product_access: {
+        Args: { _product_id: string; _user_id: string }
         Returns: boolean
       }
     }

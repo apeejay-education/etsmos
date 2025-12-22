@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Users, Award, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Award, ChevronDown, ChevronRight, UserPlus, CheckCircle } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,7 @@ import { usePeople, Person } from '@/hooks/usePeople';
 import { useContributions, Contribution } from '@/hooks/useContributions';
 import { PersonDialog } from '@/components/people/PersonDialog';
 import { ContributionDialog } from '@/components/people/ContributionDialog';
+import { CreateUserDialog } from '@/components/people/CreateUserDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ratingColors: Record<string, string> = {
@@ -57,11 +58,12 @@ const ratingLabels: Record<string, string> = {
 export default function People() {
   const { people, isLoading, deletePerson } = usePeople();
   const { contributions, deleteContribution } = useContributions();
-  const { userRole } = useAuth();
+  const { userRole, isAdmin } = useAuth();
   const canEdit = userRole === 'admin' || userRole === 'manager';
 
   const [personDialogOpen, setPersonDialogOpen] = useState(false);
   const [contributionDialogOpen, setContributionDialogOpen] = useState(false);
+  const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [deletePersonId, setDeletePersonId] = useState<string | null>(null);
@@ -102,6 +104,11 @@ export default function People() {
   const handleEditContribution = (contribution: Contribution) => {
     setSelectedContribution(contribution);
     setContributionDialogOpen(true);
+  };
+
+  const handleCreateUser = (person: Person) => {
+    setSelectedPerson(person);
+    setCreateUserDialogOpen(true);
   };
 
   const handleDeletePerson = async () => {
@@ -182,12 +189,16 @@ export default function People() {
                         <div className="text-left">
                           <CardTitle className="text-lg flex items-center gap-2">
                             {person.full_name}
+                            {person.user_id && (
+                              <CheckCircle className="h-4 w-4 text-green-600" title="Has login" />
+                            )}
                             {!person.is_active && (
                               <Badge variant="secondary">Inactive</Badge>
                             )}
                           </CardTitle>
                           <p className="text-sm text-muted-foreground">
                             {[person.role_title, person.department].filter(Boolean).join(' • ') || 'No role/department set'}
+                            {person.email && ` • ${person.email}`}
                           </p>
                         </div>
                       </CollapsibleTrigger>
@@ -197,6 +208,15 @@ export default function People() {
                         </div>
                         {canEdit && (
                           <div className="flex gap-1">
+                            {isAdmin && !person.user_id && person.email && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCreateUser(person)}
+                              >
+                                <UserPlus className="h-4 w-4 text-primary" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -301,6 +321,14 @@ export default function People() {
         onOpenChange={setContributionDialogOpen}
         contribution={selectedContribution}
       />
+
+      {selectedPerson && (
+        <CreateUserDialog
+          open={createUserDialogOpen}
+          onOpenChange={setCreateUserDialogOpen}
+          person={selectedPerson}
+        />
+      )}
 
       <AlertDialog open={!!deletePersonId} onOpenChange={() => setDeletePersonId(null)}>
         <AlertDialogContent>
