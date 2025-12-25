@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useInitiatives, useCreateInitiative, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
 import { useProducts } from '@/hooks/useProducts';
+import { useExecutionSignals, useUpdateExecutionSignal, useCreateExecutionSignal } from '@/hooks/useExecutionSignals';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
 import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
 import { InitiativeTable } from '@/components/initiatives/InitiativeTable';
 import { CSVImportDialog, DuplicateInfo } from '@/components/import/CSVImportDialog';
-import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, ApprovalSource, DeliveryWindow, StrategicCategory } from '@/types/database';
+import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, ApprovalSource, DeliveryWindow, StrategicCategory, ExecutionSignal } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
 import { SortButton, SortDirection, SortOption } from '@/components/filters/SortButton';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,11 +52,23 @@ export default function Initiatives() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: initiatives, isLoading } = useInitiatives();
   const { data: products } = useProducts();
+  const { data: executionSignalsData } = useExecutionSignals();
   const { canEdit, isAdmin } = useAuth();
   const createInitiative = useCreateInitiative();
   const updateInitiative = useUpdateInitiative();
   const deleteInitiative = useDeleteInitiative();
+  const updateExecutionSignal = useUpdateExecutionSignal();
+  const createExecutionSignal = useCreateExecutionSignal();
   const queryClient = useQueryClient();
+  
+  // Create a map of initiative_id -> signal for quick lookup
+  const executionSignalsMap = useMemo(() => {
+    if (!executionSignalsData) return {};
+    return executionSignalsData.reduce((acc, signal) => {
+      acc[signal.initiative_id] = signal;
+      return acc;
+    }, {} as Record<string, ExecutionSignal>);
+  }, [executionSignalsData]);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -270,6 +283,19 @@ export default function Initiatives() {
 
   const handleStatusChange = (id: string, newStatus: InitiativeStatus) => {
     updateInitiative.mutate({ id, status: newStatus });
+  };
+
+  const handleUpdateSignal = (initiativeId: string, signalId: string | null, field: string, value: string) => {
+    if (signalId) {
+      // Update existing signal
+      updateExecutionSignal.mutate({ id: signalId, [field]: value });
+    } else {
+      // Create new signal with this field
+      createExecutionSignal.mutate({ 
+        initiative_id: initiativeId, 
+        [field]: value
+      });
+    }
   };
 
   const statusColors: Record<InitiativeStatus, string> = {
@@ -573,9 +599,11 @@ export default function Initiatives() {
         ) : viewMode === 'table' ? (
           <InitiativeTable
             initiatives={filteredInitiatives}
+            executionSignals={executionSignalsMap}
             onEdit={(initiative) => { setEditingInitiative(initiative as Initiative); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
             onUpdate={(id, field, value) => updateInitiative.mutate({ id, [field]: value })}
+            onUpdateSignal={handleUpdateSignal}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />
