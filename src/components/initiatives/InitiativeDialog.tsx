@@ -30,9 +30,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { calculateDeliveryWindow, formatDeliveryWindow } from '@/utils/deliveryWindowCalculator';
 import { InitiativeTeamManager } from './InitiativeTeamManager';
 import { InitiativeChat } from './InitiativeChat';
+import { InitiativeUpdates } from './InitiativeUpdates';
+import { InitiativeReviews } from './InitiativeReviews';
+import { InitiativeComments } from './InitiativeComments';
+import { InitiativeHistory } from './InitiativeHistory';
 import { useCurrentPersonContribution } from '@/hooks/useInitiativeAccess';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -78,15 +83,28 @@ export function InitiativeDialog({
   onSubmit, 
   isLoading 
 }: InitiativeDialogProps) {
-  const { canEdit: globalCanEdit } = useAuth();
+  const { canEdit: globalCanEdit, userRole } = useAuth();
   const { data: personData } = useCurrentPersonContribution(initiative?.id || null);
   
   // User can edit if they're admin/manager OR if they're a lead on this initiative
   const isLead = personData?.contributionRole === 'lead';
+  const isContributor = personData?.contributionRole === 'contributor';
+  const isReviewer = personData?.contributionRole === 'reviewer';
+  const isAdvisor = personData?.contributionRole === 'advisor';
   const canEditInitiative = globalCanEdit || isLead;
   const isTaggedUser = personData?.isTagged ?? false;
   // Show chat tab for all users who have a person linked (admins/managers/tagged users)
   const canAccessChat = !!personData?.personId;
+  
+  // Role-aware tab visibility
+  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
+  const canSeeUpdates = isAdminOrManager || isLead || isContributor;
+  const canAddUpdates = isLead || isContributor || isAdminOrManager;
+  const canSeeReviews = isAdminOrManager || isLead || isReviewer;
+  const canAddReviews = isLead || isReviewer || isAdminOrManager;
+  const canSeeComments = isTaggedUser || isAdminOrManager;
+  const canAddComments = isTaggedUser || isAdminOrManager;
+  const canSeeHistory = isAdminOrManager || isLead;
   
   const form = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
@@ -193,16 +211,30 @@ export function InitiativeDialog({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <Tabs defaultValue={initiative && canAccessChat && !canEditInitiative ? "chat" : "core"} className="w-full">
-              <TabsList className={`grid w-full ${initiative && canAccessChat ? 'grid-cols-5' : 'grid-cols-4'}`}>
-                <TabsTrigger value="core">Core</TabsTrigger>
-                <TabsTrigger value="approval">Approval</TabsTrigger>
-                <TabsTrigger value="delivery">Delivery</TabsTrigger>
-                <TabsTrigger value="team">Team</TabsTrigger>
-                {initiative && canAccessChat && (
-                  <TabsTrigger value="chat">Chat</TabsTrigger>
-                )}
-              </TabsList>
+            <Tabs defaultValue={initiative && canAccessChat && !canEditInitiative ? "updates" : "core"} className="w-full">
+              <ScrollArea className="w-full">
+                <TabsList className="inline-flex w-auto min-w-full">
+                  <TabsTrigger value="core">Core</TabsTrigger>
+                  <TabsTrigger value="approval">Approval</TabsTrigger>
+                  <TabsTrigger value="delivery">Delivery</TabsTrigger>
+                  <TabsTrigger value="team">Team</TabsTrigger>
+                  {initiative && canSeeUpdates && (
+                    <TabsTrigger value="updates">Updates</TabsTrigger>
+                  )}
+                  {initiative && canSeeReviews && (
+                    <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                  )}
+                  {initiative && canSeeComments && (
+                    <TabsTrigger value="comments">Comments</TabsTrigger>
+                  )}
+                  {initiative && canSeeHistory && (
+                    <TabsTrigger value="history">History</TabsTrigger>
+                  )}
+                  {initiative && canAccessChat && (
+                    <TabsTrigger value="chat">Chat</TabsTrigger>
+                  )}
+                </TabsList>
+              </ScrollArea>
 
               <TabsContent value="core" className="space-y-4 mt-4">
                 <FormField
@@ -638,6 +670,42 @@ export function InitiativeDialog({
               <TabsContent value="team" className="space-y-4 mt-4">
                 <InitiativeTeamManager initiativeId={initiative?.id || null} />
               </TabsContent>
+
+              {initiative && canSeeUpdates && personData && (
+                <TabsContent value="updates" className="space-y-4 mt-4">
+                  <InitiativeUpdates 
+                    initiativeId={initiative.id}
+                    personId={personData.personId}
+                    canAdd={canAddUpdates}
+                  />
+                </TabsContent>
+              )}
+
+              {initiative && canSeeReviews && personData && (
+                <TabsContent value="reviews" className="space-y-4 mt-4">
+                  <InitiativeReviews 
+                    initiativeId={initiative.id}
+                    personId={personData.personId}
+                    canAdd={canAddReviews}
+                  />
+                </TabsContent>
+              )}
+
+              {initiative && canSeeComments && personData && (
+                <TabsContent value="comments" className="space-y-4 mt-4">
+                  <InitiativeComments 
+                    initiativeId={initiative.id}
+                    personId={personData.personId}
+                    canAdd={canAddComments}
+                  />
+                </TabsContent>
+              )}
+
+              {initiative && canSeeHistory && (
+                <TabsContent value="history" className="space-y-4 mt-4">
+                  <InitiativeHistory initiativeId={initiative.id} />
+                </TabsContent>
+              )}
 
               {initiative && canAccessChat && personData && (
                 <TabsContent value="chat" className="space-y-4 mt-4">
