@@ -157,12 +157,15 @@ export function TaskSheet({
           {/* Assigned To */}
           <div className="space-y-2">
             <Label>Assign To</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
+            <Select 
+              value={assignedTo || 'unassigned'} 
+              onValueChange={(v) => setAssignedTo(v === 'unassigned' ? '' : v)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select assignee (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {allocatedPeople.map((person) => (
                   <SelectItem key={person.id} value={person.id}>
                     {person.full_name}
