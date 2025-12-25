@@ -162,6 +162,18 @@ Deno.serve(async (req) => {
     // Ensure the user has at least a viewer role (existing users might not have one)
     await ensureViewerRole(finalUserId);
 
+    // First, unlink any existing person record that may be linked to this user_id
+    // (to avoid unique constraint violation on people.user_id)
+    const { error: unlinkError } = await adminClient
+      .from('people')
+      .update({ user_id: null })
+      .eq('user_id', finalUserId)
+      .neq('id', person_id);
+
+    if (unlinkError) {
+      console.warn('Could not unlink existing person record:', unlinkError);
+    }
+
     // Link the person record to the auth user and set must_reset_password
     const { error: updateError } = await adminClient
       .from('people')
@@ -172,13 +184,14 @@ Deno.serve(async (req) => {
       .eq('id', person_id);
 
     if (updateError) {
+      console.error('Failed to link user to person:', updateError);
       // Rollback only if we just created a new user
       if (authData?.user?.id && authData.user.id === finalUserId) {
         await adminClient.auth.admin.deleteUser(finalUserId);
       }
 
       return new Response(
-        JSON.stringify({ error: 'Failed to link user to person record' }),
+        JSON.stringify({ error: 'Failed to link user to person record: ' + updateError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
