@@ -220,7 +220,7 @@ export function InitiativeDialog({
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <Tabs defaultValue={initiative && canAccessChat && !canEditInitiative ? "updates" : "core"} className="w-full">
+            <Tabs defaultValue={initiative ? "updates" : "core"} className="w-full">
               <ScrollArea className="w-full">
                 <TabsList className="inline-flex w-auto min-w-full">
                   <TabsTrigger value="core">Core</TabsTrigger>

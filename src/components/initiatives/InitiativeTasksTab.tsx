@@ -56,7 +56,7 @@ export function InitiativeTasksTab({ initiativeId, canManage }: InitiativeTasksT
           </Badge>
         </div>
         {canManage && (
-          <Button size="sm" onClick={() => setTaskSheetOpen(true)}>
+          <Button type="button" size="sm" onClick={() => setTaskSheetOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Add Task
           </Button>

@@ -117,10 +117,10 @@ export function TaskTable({ tasks, onEdit, onDelete, onStatusChange }: TaskTable
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(task.id)}>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(task.id)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(task.id)}>
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(task.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
