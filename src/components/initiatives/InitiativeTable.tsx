@@ -1,7 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, DeliveryWindow, ExecutionStage, HealthStatus, ExecutionSignal } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Eye, Circle } from 'lucide-react';
+import { Trash2, Eye, Circle, Users } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -117,6 +118,7 @@ function InitiativeRowWithAccess({
   canEdit: boolean;
   isAdmin: boolean;
 }) {
+  const navigate = useNavigate();
   const { data: personData } = useCurrentPersonContribution(initiative.id);
   const isLead = personData?.contributionRole === 'lead';
   const canEditSignal = isAdmin || isLead;
@@ -266,6 +268,14 @@ function InitiativeRowWithAccess({
       </TableCell>
       <TableCell>
         <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate(`/initiatives/${initiative.id}/resources`)}
+            title="Manage Resources"
+          >
+            <Users className="h-4 w-4" />
+          </Button>
           <Button 
             variant="ghost" 
             size="icon"
