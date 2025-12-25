@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { usePeople, Person, PersonInsert } from '@/hooks/usePeople';
+import { useUserRole, AppRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PersonDialogProps {
   open: boolean;
@@ -27,13 +36,25 @@ const personSchema = z.object({
   department: z.string().max(100, 'Department must be less than 100 characters').or(z.literal('')),
   role_title: z.string().max(100, 'Role must be less than 100 characters').or(z.literal('')),
   is_active: z.boolean(),
+  app_role: z.enum(['admin', 'manager', 'viewer']).optional(),
 });
 
 type FormData = z.infer<typeof personSchema>;
 
+const roleLabels: Record<AppRole, string> = {
+  admin: 'Admin',
+  manager: 'Manager',
+  viewer: 'Viewer',
+};
+
 export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) {
   const { createPerson, updatePerson } = usePeople();
+  const { isAdmin } = useAuth();
   const isEditing = !!person;
+  
+  // Fetch user role if person has a user_id
+  const { role: currentUserRole, updateRole } = useUserRole(person?.user_id || null);
+  const [selectedAppRole, setSelectedAppRole] = useState<AppRole | undefined>(undefined);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(personSchema),
@@ -43,6 +64,7 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
       department: '',
       role_title: '',
       is_active: true,
+      app_role: undefined,
     },
   });
 
@@ -56,7 +78,9 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
         department: person.department || '',
         role_title: person.role_title || '',
         is_active: person.is_active,
+        app_role: currentUserRole || undefined,
       });
+      setSelectedAppRole(currentUserRole || undefined);
     } else {
       reset({
         full_name: '',
@@ -64,9 +88,11 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
         department: '',
         role_title: '',
         is_active: true,
+        app_role: undefined,
       });
+      setSelectedAppRole(undefined);
     }
-  }, [person, reset]);
+  }, [person, currentUserRole, reset]);
 
   const onSubmit = async (data: FormData) => {
     const personData: PersonInsert = {
@@ -79,6 +105,11 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
 
     if (isEditing && person) {
       await updatePerson.mutateAsync({ id: person.id, ...personData });
+      
+      // Update app role if changed and person has user_id
+      if (person.user_id && selectedAppRole && selectedAppRole !== currentUserRole) {
+        await updateRole.mutateAsync({ userId: person.user_id, role: selectedAppRole });
+      }
     } else {
       await createPerson.mutateAsync(personData);
     }
@@ -145,6 +176,29 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             )}
           </div>
 
+          {/* App Role - Only show for admins when editing a person with a user account */}
+          {isAdmin && isEditing && person?.user_id && (
+            <div>
+              <Label htmlFor="app_role">System Role</Label>
+              <Select 
+                value={selectedAppRole} 
+                onValueChange={(value) => setSelectedAppRole(value as AppRole)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select system role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Controls what this user can do in the system
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <Label htmlFor="is_active">Active</Label>
             <Switch
@@ -158,7 +212,7 @@ export function PersonDialog({ open, onOpenChange, person }: PersonDialogProps) 
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createPerson.isPending || updatePerson.isPending}>
+            <Button type="submit" disabled={createPerson.isPending || updatePerson.isPending || updateRole.isPending}>
               {isEditing ? 'Update' : 'Add'} Person
             </Button>
           </div>

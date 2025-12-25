@@ -209,7 +209,7 @@ export default function InitiativeDetail() {
                 )}
               </>
             )}
-            {(permissions.canEditCore || isNew) && (
+            {(permissions.canEditCore || (isNew && permissions.canCreateInitiative)) && (
               <TabsTrigger value="edit" className="gap-2">
                 <Settings className="h-4 w-4" />
                 {isNew ? 'Create' : 'Edit'}
@@ -257,7 +257,7 @@ export default function InitiativeDetail() {
             </>
           )}
 
-          {(permissions.canEditCore || isNew) && (
+          {(permissions.canEditCore || (isNew && permissions.canCreateInitiative)) && (
             <TabsContent value="edit" className="space-y-6">
               <InitiativeEditForm
                 initiative={isNew ? null : initiative!}

@@ -5,9 +5,10 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, Upload, Download, List, LayoutGrid } from 'lucide-react';
+import { Plus, Pencil, Trash2, Filter, Upload, Download, List, LayoutGrid, Users } from 'lucide-react';
 import { ProductDialog } from '@/components/products/ProductDialog';
 import { ProductTable } from '@/components/products/ProductTable';
+import { ProductLeadDialog } from '@/components/products/ProductLeadDialog';
 import { CSVImportDialog, DuplicateInfo } from '@/components/import/CSVImportDialog';
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
 import { SearchFilter } from '@/components/filters/SearchFilter';
@@ -52,7 +53,9 @@ export default function Products() {
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [productLeadDialogOpen, setProductLeadDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [selectedProductForLeads, setSelectedProductForLeads] = useState<Product | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [lifecycleFilter, setLifecycleFilter] = useState('all');
@@ -61,6 +64,11 @@ export default function Products() {
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+
+  const handleManageLeads = (product: Product) => {
+    setSelectedProductForLeads(product);
+    setProductLeadDialogOpen(true);
+  };
 
   const validProductTypes = ['internal', 'external', 'client', 'rnd'];
   const validLifecycleStages = ['ideation', 'build', 'live', 'scale', 'maintenance', 'sunset'];
@@ -376,6 +384,7 @@ export default function Products() {
             onEdit={(product) => { setEditingProduct(product); setDialogOpen(true); }}
             onDelete={(id) => setDeleteId(id)}
             onUpdate={(id, field, value) => updateProduct.mutate({ id, [field]: value })}
+            onManageLeads={canEdit ? handleManageLeads : undefined}
             canEdit={canEdit}
             isAdmin={isAdmin}
           />
@@ -391,6 +400,14 @@ export default function Products() {
                     </div>
                     {canEdit && (
                       <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleManageLeads(product)}
+                          title="Manage Product Leads"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
@@ -459,6 +476,15 @@ export default function Products() {
           checkDuplicates={checkDuplicates}
           isLoading={isImporting}
         />
+
+        {selectedProductForLeads && (
+          <ProductLeadDialog
+            open={productLeadDialogOpen}
+            onOpenChange={setProductLeadDialogOpen}
+            productId={selectedProductForLeads.id}
+            productName={selectedProductForLeads.name}
+          />
+        )}
 
         <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
           <AlertDialogContent>

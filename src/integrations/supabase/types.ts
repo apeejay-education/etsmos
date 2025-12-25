@@ -586,6 +586,45 @@ export type Database = {
         }
         Relationships: []
       }
+      product_leads: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          person_id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          person_id: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          person_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_leads_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           business_owner: string | null
@@ -692,6 +731,10 @@ export type Database = {
       }
       is_initiative_lead: {
         Args: { _initiative_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_product_lead: {
+        Args: { _product_id: string; _user_id: string }
         Returns: boolean
       }
       user_has_initiative_access: {
