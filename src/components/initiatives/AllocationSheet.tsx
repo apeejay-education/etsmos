@@ -48,7 +48,7 @@ export function AllocationSheet({
   onUpdate,
 }: AllocationSheetProps) {
   const [personId, setPersonId] = useState('');
-  const [role, setRole] = useState<'lead' | 'contributor' | 'reviewer' | 'advisor'>('contributor');
+  const [role, setRole] = useState<'lead' | 'contributor'>('contributor');
   const [hours, setHours] = useState(8);
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState('');
@@ -158,8 +158,6 @@ export function AllocationSheet({
               <SelectContent>
                 <SelectItem value="lead">Lead (1.2x multiplier)</SelectItem>
                 <SelectItem value="contributor">Contributor (1.0x multiplier)</SelectItem>
-                <SelectItem value="reviewer">Reviewer (0.6x multiplier)</SelectItem>
-                <SelectItem value="advisor">Advisor (0.3x multiplier)</SelectItem>
               </SelectContent>
             </Select>
           </div>
