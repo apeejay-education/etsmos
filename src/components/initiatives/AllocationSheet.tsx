@@ -59,7 +59,9 @@ export function AllocationSheet({
   useEffect(() => {
     if (editingAllocation) {
       setPersonId(editingAllocation.person_id);
-      setRole(editingAllocation.role);
+      // Default to 'contributor' if role is not 'lead'
+      const validRole = editingAllocation.role === 'lead' ? 'lead' : 'contributor';
+      setRole(validRole);
       setHours(editingAllocation.allocated_hours_per_week);
       setStartDate(editingAllocation.start_date);
       setEndDate(editingAllocation.end_date || '');
