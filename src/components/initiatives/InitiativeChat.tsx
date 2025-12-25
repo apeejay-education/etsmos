@@ -94,6 +94,7 @@ export function InitiativeChat({ initiativeId, personId, personName, canSendMess
                     </div>
                     {isOwn && (
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         className="h-6 px-2 mt-1 text-muted-foreground hover:text-destructive"
