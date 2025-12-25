@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, FileText, MessageSquare, Settings } from 'lucide-react';
+import { ArrowLeft, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,6 @@ import { useProducts } from '@/hooks/useProducts';
 import { InitiativeOverviewTab } from '@/components/initiatives/InitiativeOverviewTab';
 import { InitiativeResourcesTab } from '@/components/initiatives/InitiativeResourcesTab';
 import { InitiativeTasksPage } from '@/components/initiatives/InitiativeTasksPage';
-import { InitiativeActivityTab } from '@/components/initiatives/InitiativeActivityTab';
 import { InitiativeEditForm } from '@/components/initiatives/InitiativeEditForm';
 
 export default function InitiativeDetail() {
@@ -217,12 +216,6 @@ export default function InitiativeDetail() {
                     Resources ({totalResources})
                   </TabsTrigger>
                 )}
-                {permissions.canViewActivity && (
-                  <TabsTrigger value="activity" className="gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Activity
-                  </TabsTrigger>
-                )}
               </>
             )}
             {(permissions.canEditCore || (isNew && permissions.canCreateInitiative)) && (
@@ -258,15 +251,6 @@ export default function InitiativeDetail() {
                     initiativeId={id!}
                     initiative={initiative}
                     canAllocate={permissions.canAllocateResources}
-                  />
-                </TabsContent>
-              )}
-
-              {permissions.canViewActivity && (
-                <TabsContent value="activity" className="space-y-6">
-                  <InitiativeActivityTab
-                    initiativeId={id!}
-                    permissions={permissions}
                   />
                 </TabsContent>
               )}
