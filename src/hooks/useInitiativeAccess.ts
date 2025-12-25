@@ -38,8 +38,6 @@ export function useCurrentPersonContribution(initiativeId: string | null) {
   return useQuery({
     queryKey: ['current-person-contribution', initiativeId],
     queryFn: async () => {
-      if (!initiativeId) return null;
-      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
@@ -52,6 +50,17 @@ export function useCurrentPersonContribution(initiativeId: string | null) {
       
       if (!person) return null;
 
+      // If no initiativeId, just return person info
+      if (!initiativeId) {
+        return {
+          contribution: null,
+          personId: person.id,
+          personName: person.full_name,
+          isTagged: false,
+          contributionRole: null
+        };
+      }
+
       // Check if this person is tagged in the initiative
       const { data: contribution } = await supabase
         .from('contributions')
@@ -60,7 +69,7 @@ export function useCurrentPersonContribution(initiativeId: string | null) {
         .eq('person_id', person.id)
         .maybeSingle();
       
-      // Return person info even if no contribution (for admins/managers to chat)
+      // Return person info even if no contribution (for admins/managers)
       return {
         contribution,
         personId: person.id,
@@ -69,6 +78,6 @@ export function useCurrentPersonContribution(initiativeId: string | null) {
         contributionRole: contribution?.contribution_role || null
       };
     },
-    enabled: !!initiativeId
+    enabled: true  // Always enabled to get person info
   });
 }

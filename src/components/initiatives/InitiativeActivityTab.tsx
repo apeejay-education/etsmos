@@ -14,9 +14,13 @@ interface InitiativeActivityTabProps {
 }
 
 export function InitiativeActivityTab({ initiativeId, permissions }: InitiativeActivityTabProps) {
-  const { data: personData } = useCurrentPersonContribution(initiativeId);
-  const personId = personData?.personId || '';
+  const { data: personData, isLoading: loadingPerson } = useCurrentPersonContribution(initiativeId);
+  const personId = personData?.personId;
 
+  // Don't allow adding if we don't have a valid personId
+  const canAddUpdates = permissions.canAddUpdates && !!personId;
+  const canAddReviews = permissions.canAddReviews && !!personId;
+  const canAddComments = permissions.canAddComments && !!personId;
   return (
     <Tabs defaultValue="updates" className="space-y-4">
       <TabsList>
@@ -55,8 +59,8 @@ export function InitiativeActivityTab({ initiativeId, permissions }: InitiativeA
             <CardContent>
               <InitiativeUpdates 
                 initiativeId={initiativeId} 
-                personId={personId}
-                canAdd={permissions.canAddUpdates}
+                personId={personId || ''}
+                canAdd={canAddUpdates}
               />
             </CardContent>
           </Card>
@@ -72,8 +76,8 @@ export function InitiativeActivityTab({ initiativeId, permissions }: InitiativeA
             <CardContent>
               <InitiativeReviews 
                 initiativeId={initiativeId}
-                personId={personId}
-                canAdd={permissions.canAddReviews}
+                personId={personId || ''}
+                canAdd={canAddReviews}
               />
             </CardContent>
           </Card>
@@ -89,8 +93,8 @@ export function InitiativeActivityTab({ initiativeId, permissions }: InitiativeA
             <CardContent>
               <InitiativeComments 
                 initiativeId={initiativeId}
-                personId={personId}
-                canAdd={permissions.canAddComments}
+                personId={personId || ''}
+                canAdd={canAddComments}
               />
             </CardContent>
           </Card>
