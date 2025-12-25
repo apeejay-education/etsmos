@@ -10,7 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Products from "./pages/Products";
 import Initiatives from "./pages/Initiatives";
-import InitiativeResources from "./pages/InitiativeResources";
+import InitiativeDetail from "./pages/InitiativeDetail";
 import Signals from "./pages/Signals";
 import Settings from "./pages/Settings";
 import MonthlySnapshots from "./pages/MonthlySnapshots";
@@ -34,7 +34,8 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/initiatives" element={<ProtectedRoute><Initiatives /></ProtectedRoute>} />
-            <Route path="/initiatives/:id/resources" element={<ProtectedRoute><InitiativeResources /></ProtectedRoute>} />
+            <Route path="/initiatives/new" element={<ProtectedRoute requiredRole="manager"><InitiativeDetail /></ProtectedRoute>} />
+            <Route path="/initiatives/:id" element={<ProtectedRoute><InitiativeDetail /></ProtectedRoute>} />
             <Route path="/delegation" element={<ProtectedRoute requiredRole="manager"><Delegation /></ProtectedRoute>} />
             <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
             <Route path="/snapshots" element={<ProtectedRoute><MonthlySnapshots /></ProtectedRoute>} />

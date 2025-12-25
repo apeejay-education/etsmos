@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useInitiatives, useCreateInitiative, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useInitiatives, useUpdateInitiative, useDeleteInitiative } from '@/hooks/useInitiatives';
 import { useProducts } from '@/hooks/useProducts';
 import { useExecutionSignals, useUpdateExecutionSignal, useCreateExecutionSignal } from '@/hooks/useExecutionSignals';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,8 +8,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Filter, List, LayoutGrid, Upload, Download, Columns3, MessageCircle } from 'lucide-react';
-import { InitiativeDialog } from '@/components/initiatives/InitiativeDialog';
+import { Plus, Trash2, Filter, List, LayoutGrid, Upload, Download, Columns3, Eye } from 'lucide-react';
 import { InitiativeKanban } from '@/components/initiatives/InitiativeKanban';
 import { InitiativeTable } from '@/components/initiatives/InitiativeTable';
 import { CSVImportDialog, DuplicateInfo } from '@/components/import/CSVImportDialog';
@@ -49,12 +48,12 @@ const sortOptions: SortOption[] = [
 ];
 
 export default function Initiatives() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: initiatives, isLoading } = useInitiatives();
   const { data: products } = useProducts();
   const { data: executionSignalsData } = useExecutionSignals();
   const { canEdit, isAdmin } = useAuth();
-  const createInitiative = useCreateInitiative();
   const updateInitiative = useUpdateInitiative();
   const deleteInitiative = useDeleteInitiative();
   const updateExecutionSignal = useUpdateExecutionSignal();
@@ -70,9 +69,7 @@ export default function Initiatives() {
     }, {} as Record<string, ExecutionSignal>);
   }, [executionSignalsData]);
   
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('status') || 'all');
@@ -258,22 +255,6 @@ export default function Initiatives() {
     if (searchQuery) setSearch(searchQuery);
   }, [searchParams]);
 
-  const handleCreate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
-    createInitiative.mutate(data, {
-      onSuccess: () => setDialogOpen(false)
-    });
-  };
-
-  const handleUpdate = (data: Omit<Initiative, 'id' | 'created_at' | 'updated_at' | 'products'>) => {
-    if (!editingInitiative) return;
-    updateInitiative.mutate({ id: editingInitiative.id, ...data }, {
-      onSuccess: () => {
-        setEditingInitiative(null);
-        setDialogOpen(false);
-      }
-    });
-  };
-
   const handleDelete = () => {
     if (!deleteId) return;
     deleteInitiative.mutate(deleteId, {
@@ -458,7 +439,7 @@ export default function Initiatives() {
                   Import CSV
                 </Button>
                 <Button 
-                  onClick={() => { setEditingInitiative(null); setDialogOpen(true); }}
+                  onClick={() => navigate('/initiatives/new')}
                   disabled={!products?.length}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -580,7 +561,7 @@ export default function Initiatives() {
                 {initiatives?.length === 0 ? 'No initiatives found' : 'No initiatives match your filters'}
               </p>
               {canEdit && initiatives?.length === 0 && (
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => navigate('/initiatives/new')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Initiative
                 </Button>
@@ -590,7 +571,7 @@ export default function Initiatives() {
         ) : viewMode === 'kanban' ? (
           <InitiativeKanban
             initiatives={filteredInitiatives}
-            onEdit={(initiative) => { setEditingInitiative(initiative); setDialogOpen(true); }}
+            onEdit={(initiative) => navigate(`/initiatives/${initiative.id}`)}
             onDelete={(id) => setDeleteId(id)}
             onStatusChange={handleStatusChange}
             canEdit={canEdit}
@@ -600,7 +581,7 @@ export default function Initiatives() {
           <InitiativeTable
             initiatives={filteredInitiatives}
             executionSignals={executionSignalsMap}
-            onEdit={(initiative) => { setEditingInitiative(initiative as Initiative); setDialogOpen(true); }}
+            onEdit={(initiative) => navigate(`/initiatives/${initiative.id}`)}
             onDelete={(id) => setDeleteId(id)}
             onUpdate={(id, field, value) => updateInitiative.mutate({ id, [field]: value })}
             onUpdateSignal={handleUpdateSignal}
@@ -616,7 +597,7 @@ export default function Initiatives() {
               );
               
               return (
-                <Card key={initiative.id}>
+                <Card key={initiative.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => navigate(`/initiatives/${initiative.id}`)}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-2 flex-1">
@@ -672,15 +653,14 @@ export default function Initiatives() {
                           </p>
                         )}
                       </div>
-                      <div className="flex gap-1 ml-4">
-                        {/* Always show view button for all users to open dialog */}
+                      <div className="flex gap-1 ml-4" onClick={(e) => e.stopPropagation()}>
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => { setEditingInitiative(initiative); setDialogOpen(true); }}
-                          title={canEdit ? "Edit Initiative" : "View Initiative"}
+                          onClick={() => navigate(`/initiatives/${initiative.id}`)}
+                          title="View Initiative"
                         >
-                          {canEdit ? <Pencil className="h-4 w-4" /> : <MessageCircle className="h-4 w-4" />}
+                          <Eye className="h-4 w-4" />
                         </Button>
                         {isAdmin && (
                           <Button 
@@ -699,15 +679,6 @@ export default function Initiatives() {
             })}
           </div>
         )}
-
-        <InitiativeDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          initiative={editingInitiative}
-          products={products || []}
-          onSubmit={editingInitiative ? handleUpdate : handleCreate}
-          isLoading={createInitiative.isPending || updateInitiative.isPending}
-        />
 
         <CSVImportDialog
           open={importDialogOpen}

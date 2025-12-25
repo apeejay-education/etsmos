@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel, DeliveryWindow, ExecutionStage, HealthStatus, ExecutionSignal } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Eye, Circle, Users } from 'lucide-react';
+import { Trash2, Eye, Circle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -269,23 +269,17 @@ function InitiativeRowWithAccess({
       <TableCell>
         <div className="flex gap-1">
           <Button 
+            type="button"
             variant="ghost" 
             size="icon"
-            onClick={() => navigate(`/initiatives/${initiative.id}/resources`)}
-            title="Manage Resources"
-          >
-            <Users className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => onEdit(initiative)}
-            title={canEdit ? "Edit Initiative" : "View Initiative"}
+            onClick={() => navigate(`/initiatives/${initiative.id}`)}
+            title="View Initiative"
           >
             <Eye className="h-4 w-4" />
           </Button>
           {isAdmin && (
             <Button 
+              type="button"
               variant="ghost" 
               size="icon"
               onClick={() => onDelete(initiative.id)}
