@@ -74,10 +74,8 @@ export function useInitiativeChat(initiativeId: string | null) {
       
       if (error) throw error;
       return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['initiative-chat', initiativeId] });
     }
+    // Realtime subscription handles the update, no need to invalidate here
   });
 
   const deleteMessage = useMutation({
@@ -88,10 +86,8 @@ export function useInitiativeChat(initiativeId: string | null) {
         .eq('id', messageId);
       
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['initiative-chat', initiativeId] });
     }
+    // Realtime subscription handles the update, no need to invalidate here
   });
 
   return {
