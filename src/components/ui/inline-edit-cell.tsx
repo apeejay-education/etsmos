@@ -14,7 +14,7 @@ interface InlineEditCellProps {
   canEdit?: boolean;
   className?: string;
   placeholder?: string;
-  displayValue?: string;
+  displayValue?: React.ReactNode;
 }
 
 export function InlineEditCell({
