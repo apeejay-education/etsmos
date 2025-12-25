@@ -101,7 +101,9 @@ export function InitiativeDialog({
   
   // Admin always has access to everything, regardless of whether they have a person record
   const hasPersonId = !!personData?.personId;
-  const canAccessChat = hasPersonId || isAdmin;
+  
+  // Chat is visible to everyone - admins, managers, and anyone tagged on the initiative
+  const canAccessChat = isAdminOrManager || isTaggedUser;
   
   // Role-aware tab visibility - Admin sees ALL tabs
   const canSeeUpdates = isAdmin || isManager || isLead || isContributor;
@@ -716,18 +718,12 @@ export function InitiativeDialog({
 
               {initiative && canAccessChat && (
                 <TabsContent value="chat" className="space-y-4 mt-4">
-                  {hasPersonId ? (
-                    <InitiativeChat 
-                      initiativeId={initiative.id}
-                      personId={personData!.personId}
-                      personName={personData!.personName}
-                      canSendMessages={isTaggedUser || globalCanEdit}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">
-                      To participate in chat, please ask an admin to link your account to a person record.
-                    </p>
-                  )}
+                  <InitiativeChat 
+                    initiativeId={initiative.id}
+                    personId={personData?.personId || null}
+                    personName={personData?.personName || null}
+                    canSendMessages={hasPersonId}
+                  />
                 </TabsContent>
               )}
             </Tabs>

@@ -17,14 +17,12 @@ interface InitiativeChatProps {
 
 export function InitiativeChat({ initiativeId, personId, personName, canSendMessages }: InitiativeChatProps) {
   const [message, setMessage] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, sendMessage, deleteMessage } = useInitiativeChat(initiativeId);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -61,7 +59,7 @@ export function InitiativeChat({ initiativeId, personId, personName, canSendMess
 
   return (
     <div className="flex flex-col h-[400px]">
-      <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 pr-4">
         <div className="space-y-4 p-2">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
@@ -109,6 +107,7 @@ export function InitiativeChat({ initiativeId, personId, personName, canSendMess
               );
             })
           )}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
       
