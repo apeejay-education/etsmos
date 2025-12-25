@@ -41,6 +41,8 @@ export interface Product {
   updated_at: string;
 }
 
+export type InitiativeComplexity = 'low' | 'medium' | 'high';
+
 export interface Initiative {
   id: string;
   title: string;
@@ -63,6 +65,7 @@ export interface Initiative {
   delivered_outcome_summary: string | null;
   outcome_vs_intent: OutcomeMatch | null;
   closure_notes: string | null;
+  complexity: InitiativeComplexity;
   created_at: string;
   updated_at: string;
   // Joined data

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, AlertCircle, AlertTriangle } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertCircle, AlertTriangle, Clock } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,12 +47,12 @@ export function DelegationTable({ data, departmentFilter, priorityFilter, status
 
   if (statusFilter && statusFilter !== 'all') {
     filteredData = filteredData.filter(p => {
-      return p.initiatives.some(i => i.status === statusFilter);
+      return p.allocations.some(a => a.status === statusFilter);
     });
   }
 
-  // Sort by workload score descending
-  filteredData = [...filteredData].sort((a, b) => b.workloadScore - a.workloadScore);
+  // Sort by utilization percentage descending
+  filteredData = [...filteredData].sort((a, b) => b.utilizationPercentage - a.utilizationPercentage);
 
   return (
     <div className="rounded-md border">
@@ -63,18 +63,18 @@ export function DelegationTable({ data, departmentFilter, priorityFilter, status
             <TableHead>Name</TableHead>
             <TableHead>Department</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead className="text-center">Hours/Week</TableHead>
             <TableHead className="text-center">Active</TableHead>
-            <TableHead className="text-center">Completed</TableHead>
             <TableHead className="text-center">Priority Mix</TableHead>
             <TableHead className="text-center">Risk</TableHead>
-            <TableHead>Workload</TableHead>
+            <TableHead>Utilization</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredData.length === 0 ? (
             <TableRow>
               <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                No people with initiatives found.
+                No people with allocations found.
               </TableCell>
             </TableRow>
           ) : (
@@ -102,10 +102,13 @@ export function DelegationTable({ data, departmentFilter, priorityFilter, status
                   <TableCell className="text-muted-foreground">{person.department || '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{person.roleTitle || '—'}</TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="outline">{person.activeInitiatives}</Badge>
+                    <div className="flex items-center justify-center gap-1">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="font-medium">{person.totalAllocatedHours}</span>
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
-                    <Badge variant="secondary">{person.completedInitiatives}</Badge>
+                    <Badge variant="outline">{person.activeInitiatives}</Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
@@ -147,69 +150,72 @@ export function DelegationTable({ data, departmentFilter, priorityFilter, status
                   </TableCell>
                   <TableCell>
                     <WorkloadBar
-                      score={person.workloadScore}
+                      utilizationPercentage={person.utilizationPercentage}
+                      effectiveLoad={person.effectiveLoad}
                       category={person.workloadCategory}
-                      highPriority={person.highPriorityCount}
-                      mediumPriority={person.mediumPriorityCount}
-                      lowPriority={person.lowPriorityCount}
-                      blocked={person.blockedCount}
-                      overdue={person.overdueCount}
+                      totalHours={person.totalAllocatedHours}
                     />
                   </TableCell>
                 </TableRow>
                 
-                {/* Expanded Row - Initiative List */}
+                {/* Expanded Row - Allocation List */}
                 {expandedRows.has(person.id) && (
                   <TableRow>
                     <TableCell colSpan={9} className="bg-muted/30 p-0">
                       <div className="p-4">
-                        <h4 className="text-sm font-semibold mb-3">Initiatives</h4>
+                        <h4 className="text-sm font-semibold mb-3">Resource Allocations</h4>
                         <div className="space-y-2">
-                          {person.initiatives.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No initiatives assigned.</p>
+                          {person.allocations.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No allocations assigned.</p>
                           ) : (
-                            person.initiatives.map((init) => (
+                            person.allocations.map((alloc) => (
                               <div
-                                key={init.id}
+                                key={alloc.id}
                                 className="flex items-center justify-between p-2 bg-background rounded border cursor-pointer hover:bg-muted/50"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/initiatives?search=${encodeURIComponent(init.title)}`);
+                                  navigate(`/initiatives?search=${encodeURIComponent(alloc.title)}`);
                                 }}
                               >
                                 <div className="flex-1">
-                                  <span className="font-medium text-sm">{init.title}</span>
-                                  {init.product_name && (
+                                  <span className="font-medium text-sm">{alloc.title}</span>
+                                  {alloc.product_name && (
                                     <span className="text-muted-foreground text-xs ml-2">
-                                      ({init.product_name})
+                                      ({alloc.product_name})
                                     </span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Badge
-                                    variant={
-                                      init.priority_level === 'high' ? 'destructive' :
-                                      init.priority_level === 'medium' ? 'default' : 'secondary'
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {init.priority_level}
+                                  <Badge variant="outline" className="text-xs">
+                                    {alloc.role}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {alloc.allocatedHoursPerWeek}h/w
                                   </Badge>
                                   <Badge
                                     variant={
-                                      init.status === 'blocked' ? 'destructive' :
-                                      init.status === 'delivered' ? 'outline' : 'secondary'
+                                      alloc.priority_level === 'high' ? 'destructive' :
+                                      alloc.priority_level === 'medium' ? 'default' : 'secondary'
                                     }
                                     className="text-xs"
                                   >
-                                    {init.status.replace('_', ' ')}
+                                    {alloc.priority_level}
                                   </Badge>
-                                  {init.health_status && (
+                                  <Badge
+                                    variant={
+                                      alloc.status === 'blocked' ? 'destructive' :
+                                      alloc.status === 'delivered' ? 'outline' : 'secondary'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {alloc.status.replace('_', ' ')}
+                                  </Badge>
+                                  {alloc.health_status && (
                                     <div className={cn(
                                       'h-2 w-2 rounded-full',
-                                      init.health_status === 'green' && 'bg-green-500',
-                                      init.health_status === 'amber' && 'bg-yellow-500',
-                                      init.health_status === 'red' && 'bg-destructive'
+                                      alloc.health_status === 'green' && 'bg-green-500',
+                                      alloc.health_status === 'amber' && 'bg-yellow-500',
+                                      alloc.health_status === 'red' && 'bg-destructive'
                                     )} />
                                   )}
                                 </div>
