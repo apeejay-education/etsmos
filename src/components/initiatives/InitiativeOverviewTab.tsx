@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { Initiative } from '@/types/database';
 import { InitiativePermissions } from '@/hooks/useInitiativePermissions';
 import { InitiativeChat } from './InitiativeChat';
+import { useCurrentPersonContribution } from '@/hooks/useInitiativeAccess';
 import { Calendar, Target, User, Shield, FileText } from 'lucide-react';
 
 interface InitiativeOverviewTabProps {
@@ -12,6 +13,8 @@ interface InitiativeOverviewTabProps {
 }
 
 export function InitiativeOverviewTab({ initiative, permissions }: InitiativeOverviewTabProps) {
+  const { data: personData } = useCurrentPersonContribution(initiative.id);
+  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
