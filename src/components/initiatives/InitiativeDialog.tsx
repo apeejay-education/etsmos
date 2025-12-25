@@ -86,6 +86,11 @@ export function InitiativeDialog({
   const { canEdit: globalCanEdit, userRole } = useAuth();
   const { data: personData } = useCurrentPersonContribution(initiative?.id || null);
   
+  // Admin has FULL access to everything - override all other checks
+  const isAdmin = userRole === 'admin';
+  const isManager = userRole === 'manager';
+  const isAdminOrManager = isAdmin || isManager;
+  
   // User can edit if they're admin/manager OR if they're a lead on this initiative
   const isLead = personData?.contributionRole === 'lead';
   const isContributor = personData?.contributionRole === 'contributor';
@@ -93,18 +98,20 @@ export function InitiativeDialog({
   const isAdvisor = personData?.contributionRole === 'advisor';
   const canEditInitiative = globalCanEdit || isLead;
   const isTaggedUser = personData?.isTagged ?? false;
-  // Show chat tab for all users who have a person linked (admins/managers/tagged users)
-  const canAccessChat = !!personData?.personId;
   
-  // Role-aware tab visibility
-  const isAdminOrManager = userRole === 'admin' || userRole === 'manager';
-  const canSeeUpdates = isAdminOrManager || isLead || isContributor;
-  const canAddUpdates = isLead || isContributor || isAdminOrManager;
-  const canSeeReviews = isAdminOrManager || isLead || isReviewer;
-  const canAddReviews = isLead || isReviewer || isAdminOrManager;
-  const canSeeComments = isTaggedUser || isAdminOrManager;
-  const canAddComments = isTaggedUser || isAdminOrManager;
-  const canSeeHistory = isAdminOrManager || isLead;
+  // Admin always has access to everything, regardless of whether they have a person record
+  const hasPersonId = !!personData?.personId;
+  const canAccessChat = hasPersonId || isAdmin;
+  
+  // Role-aware tab visibility - Admin sees ALL tabs
+  const canSeeUpdates = isAdmin || isManager || isLead || isContributor;
+  const canAddUpdates = isAdmin || isManager || isLead || isContributor;
+  const canSeeReviews = isAdmin || isManager || isLead || isReviewer;
+  const canAddReviews = isAdmin || isManager || isLead || isReviewer;
+  const canSeeComments = isAdmin || isManager || isTaggedUser;
+  const canAddComments = isAdmin || isManager || isTaggedUser;
+  const canSeeHistory = isAdmin || isManager || isLead;
+  
   
   const form = useForm<InitiativeFormData>({
     resolver: zodResolver(initiativeSchema),
@@ -671,32 +678,32 @@ export function InitiativeDialog({
                 <InitiativeTeamManager initiativeId={initiative?.id || null} />
               </TabsContent>
 
-              {initiative && canSeeUpdates && personData && (
+              {initiative && canSeeUpdates && (
                 <TabsContent value="updates" className="space-y-4 mt-4">
                   <InitiativeUpdates 
                     initiativeId={initiative.id}
-                    personId={personData.personId}
-                    canAdd={canAddUpdates}
+                    personId={personData?.personId || ''}
+                    canAdd={canAddUpdates && hasPersonId}
                   />
                 </TabsContent>
               )}
 
-              {initiative && canSeeReviews && personData && (
+              {initiative && canSeeReviews && (
                 <TabsContent value="reviews" className="space-y-4 mt-4">
                   <InitiativeReviews 
                     initiativeId={initiative.id}
-                    personId={personData.personId}
-                    canAdd={canAddReviews}
+                    personId={personData?.personId || ''}
+                    canAdd={canAddReviews && hasPersonId}
                   />
                 </TabsContent>
               )}
 
-              {initiative && canSeeComments && personData && (
+              {initiative && canSeeComments && (
                 <TabsContent value="comments" className="space-y-4 mt-4">
                   <InitiativeComments 
                     initiativeId={initiative.id}
-                    personId={personData.personId}
-                    canAdd={canAddComments}
+                    personId={personData?.personId || ''}
+                    canAdd={canAddComments && hasPersonId}
                   />
                 </TabsContent>
               )}
@@ -707,14 +714,20 @@ export function InitiativeDialog({
                 </TabsContent>
               )}
 
-              {initiative && canAccessChat && personData && (
+              {initiative && canAccessChat && (
                 <TabsContent value="chat" className="space-y-4 mt-4">
-                  <InitiativeChat 
-                    initiativeId={initiative.id}
-                    personId={personData.personId}
-                    personName={personData.personName}
-                    canSendMessages={isTaggedUser || globalCanEdit}
-                  />
+                  {hasPersonId ? (
+                    <InitiativeChat 
+                      initiativeId={initiative.id}
+                      personId={personData!.personId}
+                      personName={personData!.personName}
+                      canSendMessages={isTaggedUser || globalCanEdit}
+                    />
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      To participate in chat, please ask an admin to link your account to a person record.
+                    </p>
+                  )}
                 </TabsContent>
               )}
             </Tabs>
