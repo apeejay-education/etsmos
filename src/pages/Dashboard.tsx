@@ -15,7 +15,9 @@ import {
   BarChart3,
   Bell,
   Rocket,
-  AlertCircle
+  AlertCircle,
+  Briefcase,
+  Focus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DeliveryTrendsChart } from '@/components/dashboard/DeliveryTrendsChart';
@@ -23,6 +25,8 @@ import { HealthDistributionChart } from '@/components/dashboard/HealthDistributi
 import { ContributionStatsChart } from '@/components/dashboard/ContributionStatsChart';
 import { AlertsPanel } from '@/components/dashboard/AlertsPanel';
 import { UserDashboard } from '@/components/dashboard/UserDashboard';
+import { ExecutiveView } from '@/components/dashboard/ExecutiveView';
+import { TodaysFocus } from '@/components/dashboard/TodaysFocus';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
@@ -187,8 +191,16 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <Tabs defaultValue="analytics" className="space-y-4">
+        <Tabs defaultValue="executive" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="executive" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Executive View
+            </TabsTrigger>
+            <TabsTrigger value="focus" className="gap-2">
+              <Focus className="h-4 w-4" />
+              Today's Focus
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -204,6 +216,14 @@ export default function Dashboard() {
             </TabsTrigger>
             <TabsTrigger value="recent">Recent Activity</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="executive" className="space-y-4">
+            <ExecutiveView />
+          </TabsContent>
+
+          <TabsContent value="focus" className="space-y-4">
+            <TodaysFocus />
+          </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
             {analyticsLoading ? (

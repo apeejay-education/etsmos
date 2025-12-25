@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import MonthlySnapshots from "./pages/MonthlySnapshots";
 import People from "./pages/People";
 import AuditTrail from "./pages/AuditTrail";
+import Delegation from "./pages/Delegation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
             <Route path="/initiatives" element={<ProtectedRoute><Initiatives /></ProtectedRoute>} />
+            <Route path="/delegation" element={<ProtectedRoute requiredRole="manager"><Delegation /></ProtectedRoute>} />
             <Route path="/signals" element={<ProtectedRoute><Signals /></ProtectedRoute>} />
             <Route path="/snapshots" element={<ProtectedRoute><MonthlySnapshots /></ProtectedRoute>} />
             <Route path="/people" element={<ProtectedRoute><People /></ProtectedRoute>} />
