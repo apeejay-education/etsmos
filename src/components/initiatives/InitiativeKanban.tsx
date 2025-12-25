@@ -1,8 +1,9 @@
 import { useState, DragEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Initiative, InitiativeStatus, PriorityLevel, SensitivityLevel } from '@/types/database';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Pencil, Trash2, GripVertical, MessageCircle, Eye } from 'lucide-react';
+import { Trash2, GripVertical, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { differenceInDays, format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -56,6 +57,7 @@ const columnColors: Record<InitiativeStatus, string> = {
 };
 
 export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange, canEdit, isAdmin }: InitiativeKanbanProps) {
+  const navigate = useNavigate();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<InitiativeStatus | null>(null);
 
@@ -152,10 +154,10 @@ export function InitiativeKanban({ initiatives, onEdit, onDelete, onStatusChange
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6"
-                              onClick={() => onEdit?.(initiative)}
-                              title={canEdit ? "Edit Initiative" : "View Initiative"}
+                              onClick={() => navigate(`/initiatives/${initiative.id}`)}
+                              title="View Initiative"
                             >
-                              {canEdit ? <Pencil className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                              <Eye className="h-3 w-3" />
                             </Button>
                             {isAdmin && (
                               <Button
