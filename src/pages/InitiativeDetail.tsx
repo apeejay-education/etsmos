@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, FileText, MessageSquare, History, Settings } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { ArrowLeft, Users, Clock, AlertTriangle, CheckCircle, TrendingUp, FileText, MessageSquare, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,19 +21,35 @@ import { InitiativeEditForm } from '@/components/initiatives/InitiativeEditForm'
 export default function InitiativeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const isNew = id === 'new';
+  const location = useLocation();
+  const isNew = id === 'new' || location.pathname.endsWith('/initiatives/new');
   
-  const { data: initiative, isLoading: loadingInitiative } = useInitiative(isNew ? '' : id!);
+  const { data: initiative, isLoading: loadingInitiative } = useInitiative(isNew ? '' : (id ?? ''));
   const { data: products } = useProducts();
   const { allocations, isLoading: loadingAllocations } = useInitiativeAllocations(isNew ? undefined : id);
   const { tasks, taskMetrics, isLoading: loadingTasks } = useInitiativeTasks(isNew ? undefined : id);
-  const permissions = useInitiativePermissions(isNew ? null : id!);
+  const permissions = useInitiativePermissions(isNew ? null : (id ?? null));
   
   // Default tab based on whether this is new or existing initiative
   const defaultTab = isNew ? 'edit' : 'overview';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const isLoading = loadingInitiative || loadingAllocations || loadingTasks;
+
+  if (isNew && !permissions.canCreateInitiative) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <p className="text-muted-foreground">You don’t have permission to create initiatives.</p>
+          <Button variant="outline" onClick={() => navigate('/initiatives')}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Initiatives
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (isLoading && !isNew) {
     return (
