@@ -47,6 +47,45 @@ export type Database = {
         }
         Relationships: []
       }
+      capacity_settings: {
+        Row: {
+          complexity_high: number
+          complexity_low: number
+          complexity_medium: number
+          id: string
+          role_multiplier_advisor: number
+          role_multiplier_contributor: number
+          role_multiplier_lead: number
+          role_multiplier_reviewer: number
+          updated_at: string
+          weekly_capacity_hours: number
+        }
+        Insert: {
+          complexity_high?: number
+          complexity_low?: number
+          complexity_medium?: number
+          id?: string
+          role_multiplier_advisor?: number
+          role_multiplier_contributor?: number
+          role_multiplier_lead?: number
+          role_multiplier_reviewer?: number
+          updated_at?: string
+          weekly_capacity_hours?: number
+        }
+        Update: {
+          complexity_high?: number
+          complexity_low?: number
+          complexity_medium?: number
+          id?: string
+          role_multiplier_advisor?: number
+          role_multiplier_contributor?: number
+          role_multiplier_lead?: number
+          role_multiplier_reviewer?: number
+          updated_at?: string
+          weekly_capacity_hours?: number
+        }
+        Relationships: []
+      }
       contributions: {
         Row: {
           assessed_at: string | null
@@ -160,6 +199,60 @@ export type Database = {
           },
         ]
       }
+      initiative_allocations: {
+        Row: {
+          allocated_hours_per_week: number
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          initiative_id: string
+          person_id: string
+          role: Database["public"]["Enums"]["contribution_role"]
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_hours_per_week?: number
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          initiative_id: string
+          person_id: string
+          role?: Database["public"]["Enums"]["contribution_role"]
+          start_date?: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_hours_per_week?: number
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          initiative_id?: string
+          person_id?: string
+          role?: Database["public"]["Enums"]["contribution_role"]
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_allocations_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_allocations_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       initiative_chats: {
         Row: {
           created_at: string
@@ -265,6 +358,7 @@ export type Database = {
           approval_source: Database["public"]["Enums"]["approval_source"]
           approving_authority: string | null
           closure_notes: string | null
+          complexity: string
           context: string | null
           created_at: string
           delivered_outcome_summary: string | null
@@ -292,6 +386,7 @@ export type Database = {
           approval_source?: Database["public"]["Enums"]["approval_source"]
           approving_authority?: string | null
           closure_notes?: string | null
+          complexity?: string
           context?: string | null
           created_at?: string
           delivered_outcome_summary?: string | null
@@ -321,6 +416,7 @@ export type Database = {
           approval_source?: Database["public"]["Enums"]["approval_source"]
           approving_authority?: string | null
           closure_notes?: string | null
+          complexity?: string
           context?: string | null
           created_at?: string
           delivered_outcome_summary?: string | null

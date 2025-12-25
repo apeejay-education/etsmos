@@ -2,47 +2,38 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface WorkloadBarProps {
-  score: number;
+  utilizationPercentage: number;
+  effectiveLoad: number;
   category: 'healthy' | 'warning' | 'overloaded';
-  highPriority: number;
-  mediumPriority: number;
-  lowPriority: number;
-  blocked: number;
-  overdue: number;
+  totalHours: number;
 }
 
 export function WorkloadBar({
-  score,
+  utilizationPercentage,
+  effectiveLoad,
   category,
-  highPriority,
-  mediumPriority,
-  lowPriority,
-  blocked,
-  overdue,
+  totalHours,
 }: WorkloadBarProps) {
-  const maxScore = 15; // Visual cap for progress bar
-  const percentage = Math.min((score / maxScore) * 100, 100);
+  const percentage = Math.min(utilizationPercentage, 100);
+  const displayPercentage = Math.round(utilizationPercentage);
 
   const tooltipContent = (
     <div className="space-y-1 text-xs">
-      <div className="font-semibold">Workload Score: {score}</div>
+      <div className="font-semibold">Utilization: {displayPercentage}%</div>
       <div className="border-t border-border pt-1 space-y-0.5">
-        <div>High Priority × 3: {highPriority} × 3 = {highPriority * 3}</div>
-        <div>Medium Priority × 2: {mediumPriority} × 2 = {mediumPriority * 2}</div>
-        <div>Low Priority × 1: {lowPriority} × 1 = {lowPriority}</div>
-        <div>Blocked × 2: {blocked} × 2 = {blocked * 2}</div>
-        <div>Overdue × 2: {overdue} × 2 = {overdue * 2}</div>
+        <div>Total Allocated Hours: {totalHours}h/week</div>
+        <div>Effective Load: {effectiveLoad.toFixed(1)}h (with multipliers)</div>
       </div>
       <div className="border-t border-border pt-1">
-        <span className="font-medium">Category: </span>
+        <span className="font-medium">Status: </span>
         <span className={cn(
           category === 'healthy' && 'text-green-500',
           category === 'warning' && 'text-yellow-500',
           category === 'overloaded' && 'text-destructive'
         )}>
-          {category === 'healthy' && 'Healthy (0-4)'}
-          {category === 'warning' && 'Warning (5-8)'}
-          {category === 'overloaded' && 'Overloaded (9+)'}
+          {category === 'healthy' && 'Healthy (0-70%)'}
+          {category === 'warning' && 'Warning (71-90%)'}
+          {category === 'overloaded' && 'Overloaded (91%+)'}
         </span>
       </div>
     </div>
@@ -64,12 +55,12 @@ export function WorkloadBar({
             />
           </div>
           <span className={cn(
-            'text-sm font-medium min-w-[2rem]',
+            'text-sm font-medium min-w-[3rem]',
             category === 'healthy' && 'text-green-600',
             category === 'warning' && 'text-yellow-600',
             category === 'overloaded' && 'text-destructive'
           )}>
-            {score}
+            {displayPercentage}%
           </span>
         </div>
       </TooltipTrigger>

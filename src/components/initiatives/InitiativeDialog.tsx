@@ -38,6 +38,7 @@ import { InitiativeUpdates } from './InitiativeUpdates';
 import { InitiativeReviews } from './InitiativeReviews';
 import { InitiativeComments } from './InitiativeComments';
 import { InitiativeHistory } from './InitiativeHistory';
+import { InitiativeResourceAllocation } from './InitiativeResourceAllocation';
 import { useCurrentPersonContribution } from '@/hooks/useInitiativeAccess';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -227,6 +228,9 @@ export function InitiativeDialog({
                   <TabsTrigger value="approval">Approval</TabsTrigger>
                   <TabsTrigger value="delivery">Delivery</TabsTrigger>
                   <TabsTrigger value="team">Team</TabsTrigger>
+                  {initiative && (
+                    <TabsTrigger value="resources">Resources</TabsTrigger>
+                  )}
                   {initiative && canSeeUpdates && (
                     <TabsTrigger value="updates">Updates</TabsTrigger>
                   )}

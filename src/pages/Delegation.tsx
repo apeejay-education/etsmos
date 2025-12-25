@@ -3,12 +3,14 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Users, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, AlertTriangle, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { useDelegation } from '@/hooks/useDelegation';
+import { useCapacitySettings } from '@/hooks/useCapacitySettings';
 import { DelegationTable } from '@/components/delegation/DelegationTable';
 
 export default function Delegation() {
   const { data, isLoading } = useDelegation();
+  const { settings } = useCapacitySettings();
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -22,12 +24,17 @@ export default function Delegation() {
 
   // Summary stats
   const stats = useMemo(() => {
-    if (!data) return { total: 0, healthy: 0, warning: 0, overloaded: 0 };
+    if (!data) return { total: 0, healthy: 0, warning: 0, overloaded: 0, avgUtilization: 0 };
+    const total = data.length;
+    const avgUtilization = total > 0 
+      ? Math.round(data.reduce((sum, p) => sum + p.utilizationPercentage, 0) / total)
+      : 0;
     return {
-      total: data.length,
+      total,
       healthy: data.filter(p => p.workloadCategory === 'healthy').length,
       warning: data.filter(p => p.workloadCategory === 'warning').length,
       overloaded: data.filter(p => p.workloadCategory === 'overloaded').length,
+      avgUtilization,
     };
   }, [data]);
 
@@ -53,12 +60,12 @@ export default function Delegation() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Delegation Dashboard</h1>
           <p className="text-muted-foreground">
-            People-centric view of initiative ownership and workload distribution
+            Time-based resource allocation and workload visibility
           </p>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total People</CardTitle>
@@ -66,7 +73,17 @@ export default function Delegation() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">With active initiatives</p>
+              <p className="text-xs text-muted-foreground">With active allocations</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg. Utilization</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.avgUtilization}%</div>
+              <p className="text-xs text-muted-foreground">Of {settings?.weekly_capacity_hours || 40}h capacity</p>
             </CardContent>
           </Card>
           <Card className="border-green-500/50 bg-green-500/5">
@@ -76,7 +93,7 @@ export default function Delegation() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{stats.healthy}</div>
-              <p className="text-xs text-muted-foreground">Workload score 0-4</p>
+              <p className="text-xs text-muted-foreground">0-70% utilization</p>
             </CardContent>
           </Card>
           <Card className="border-yellow-500/50 bg-yellow-500/5">
@@ -86,7 +103,7 @@ export default function Delegation() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-yellow-600">{stats.warning}</div>
-              <p className="text-xs text-muted-foreground">Workload score 5-8</p>
+              <p className="text-xs text-muted-foreground">71-90% utilization</p>
             </CardContent>
           </Card>
           <Card className="border-destructive/50 bg-destructive/5">
@@ -96,7 +113,7 @@ export default function Delegation() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">{stats.overloaded}</div>
-              <p className="text-xs text-muted-foreground">Workload score 9+</p>
+              <p className="text-xs text-muted-foreground">91%+ utilization</p>
             </CardContent>
           </Card>
         </div>

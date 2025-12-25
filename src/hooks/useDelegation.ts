@@ -1,12 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useCapacitySettings } from './useCapacitySettings';
 
 export interface PersonWorkload {
   id: string;
   fullName: string;
   department: string | null;
   roleTitle: string | null;
-  totalInitiatives: number;
+  totalAllocatedHours: number;
+  effectiveLoad: number;
+  utilizationPercentage: number;
+  workloadCategory: 'healthy' | 'warning' | 'overloaded';
   activeInitiatives: number;
   completedInitiatives: number;
   highPriorityCount: number;
@@ -16,13 +20,18 @@ export interface PersonWorkload {
   overdueCount: number;
   redHealthCount: number;
   amberHealthCount: number;
-  workloadScore: number;
-  workloadCategory: 'healthy' | 'warning' | 'overloaded';
-  initiatives: {
+  allocations: {
     id: string;
+    initiativeId: string;
     title: string;
     status: string;
     priority_level: string;
+    complexity: string;
+    role: string;
+    allocatedHoursPerWeek: number;
+    effectiveLoad: number;
+    startDate: string;
+    endDate: string | null;
     tentative_delivery_date: string | null;
     health_status: string | null;
     product_name: string | null;
@@ -30,100 +39,172 @@ export interface PersonWorkload {
 }
 
 export function useDelegation() {
+  const { settings } = useCapacitySettings();
+
   return useQuery({
-    queryKey: ['delegation'],
+    queryKey: ['delegation', settings?.id],
+    enabled: !!settings,
     queryFn: async () => {
       const now = new Date();
+      const today = now.toISOString().split('T')[0];
 
-      // Get all people with their contributions
-      const { data: people, error: peopleError } = await supabase
-        .from('people')
+      // Get all allocations with person and initiative data
+      const { data: allocations, error: allocationsError } = await supabase
+        .from('initiative_allocations')
         .select(`
-          id,
-          full_name,
-          department,
-          role_title,
-          contributions (
-            contribution_role,
-            initiative_id,
-            initiatives (
-              id,
-              title,
-              status,
-              priority_level,
-              tentative_delivery_date,
-              products (name),
-              execution_signals (health_status)
-            )
+          *,
+          person:people(id, full_name, department, role_title, is_active),
+          initiative:initiatives(
+            id, 
+            title, 
+            status, 
+            priority_level, 
+            complexity,
+            tentative_delivery_date,
+            products(name),
+            execution_signals(health_status)
           )
         `)
+        .lte('start_date', today)
+        .or(`end_date.is.null,end_date.gte.${today}`);
+
+      if (allocationsError) throw allocationsError;
+
+      // Get all active people for the list (even those without allocations)
+      const { data: people, error: peopleError } = await supabase
+        .from('people')
+        .select('id, full_name, department, role_title')
         .eq('is_active', true)
         .order('full_name');
 
       if (peopleError) throw peopleError;
 
-      const workloadData: PersonWorkload[] = (people || []).map((person: any) => {
-        const contributions = person.contributions || [];
-        const initiatives = contributions
-          .filter((c: any) => c.initiatives)
-          .map((c: any) => ({
-            id: c.initiatives.id,
-            title: c.initiatives.title,
-            status: c.initiatives.status,
-            priority_level: c.initiatives.priority_level,
-            tentative_delivery_date: c.initiatives.tentative_delivery_date,
-            health_status: c.initiatives.execution_signals?.[0]?.health_status || null,
-            product_name: c.initiatives.products?.name || null,
-            contribution_role: c.contribution_role,
-          }));
+      // Get role and complexity multipliers from settings
+      const getRoleMultiplier = (role: string): number => {
+        if (!settings) return 1.0;
+        switch (role) {
+          case 'lead': return settings.role_multiplier_lead;
+          case 'contributor': return settings.role_multiplier_contributor;
+          case 'reviewer': return settings.role_multiplier_reviewer;
+          case 'advisor': return settings.role_multiplier_advisor;
+          default: return 1.0;
+        }
+      };
 
-        // Filter unique initiatives (person might have multiple contribution roles)
-        const uniqueInitiatives = initiatives.filter((init: any, index: number, self: any[]) =>
-          index === self.findIndex((i) => i.id === init.id)
-        );
+      const getComplexityMultiplier = (complexity: string): number => {
+        if (!settings) return 1.0;
+        switch (complexity) {
+          case 'low': return settings.complexity_low;
+          case 'medium': return settings.complexity_medium;
+          case 'high': return settings.complexity_high;
+          default: return 1.0;
+        }
+      };
 
-        const openStatuses = ['approved', 'in_progress', 'blocked'];
-        const activeInitiatives = uniqueInitiatives.filter((i: any) => openStatuses.includes(i.status));
-        const completedInitiatives = uniqueInitiatives.filter((i: any) => i.status === 'delivered');
+      const weeklyCapacity = settings?.weekly_capacity_hours || 40;
 
-        const highPriorityCount = activeInitiatives.filter((i: any) => i.priority_level === 'high').length;
-        const mediumPriorityCount = activeInitiatives.filter((i: any) => i.priority_level === 'medium').length;
-        const lowPriorityCount = activeInitiatives.filter((i: any) => i.priority_level === 'low').length;
-        const blockedCount = activeInitiatives.filter((i: any) => i.status === 'blocked').length;
+      // Group allocations by person
+      const personAllocationsMap = new Map<string, any[]>();
+      
+      for (const allocation of allocations || []) {
+        if (!allocation.person || !allocation.person.is_active) continue;
+        
+        const personId = allocation.person.id;
+        if (!personAllocationsMap.has(personId)) {
+          personAllocationsMap.set(personId, []);
+        }
+        personAllocationsMap.get(personId)!.push(allocation);
+      }
 
-        // Check overdue: tentative_delivery_date is in the past
-        const overdueCount = activeInitiatives.filter((i: any) => {
-          if (!i.tentative_delivery_date) return false;
-          return new Date(i.tentative_delivery_date) < now;
-        }).length;
+      // Build workload data for each person with allocations
+      const workloadData: PersonWorkload[] = [];
 
-        const redHealthCount = activeInitiatives.filter((i: any) => i.health_status === 'red').length;
-        const amberHealthCount = activeInitiatives.filter((i: any) => i.health_status === 'amber').length;
+      for (const person of people || []) {
+        const personAllocations = personAllocationsMap.get(person.id) || [];
+        
+        // Skip people with no allocations
+        if (personAllocations.length === 0) continue;
 
-        // Workload Score Calculation
-        const workloadScore =
-          (highPriorityCount * 3) +
-          (mediumPriorityCount * 2) +
-          (lowPriorityCount * 1) +
-          (blockedCount * 2) +
-          (overdueCount * 2);
+        let totalAllocatedHours = 0;
+        let totalEffectiveLoad = 0;
+        let highPriorityCount = 0;
+        let mediumPriorityCount = 0;
+        let lowPriorityCount = 0;
+        let blockedCount = 0;
+        let overdueCount = 0;
+        let redHealthCount = 0;
+        let amberHealthCount = 0;
+        let activeInitiatives = 0;
+        let completedInitiatives = 0;
 
-        // Categorization
+        const processedAllocations = personAllocations.map((alloc: any) => {
+          const initiative = alloc.initiative;
+          const complexity = initiative?.complexity || 'medium';
+          const roleMultiplier = getRoleMultiplier(alloc.role);
+          const complexityMultiplier = getComplexityMultiplier(complexity);
+          const effectiveLoad = alloc.allocated_hours_per_week * roleMultiplier * complexityMultiplier;
+
+          totalAllocatedHours += alloc.allocated_hours_per_week;
+          totalEffectiveLoad += effectiveLoad;
+
+          const openStatuses = ['approved', 'in_progress', 'blocked'];
+          if (initiative && openStatuses.includes(initiative.status)) {
+            activeInitiatives++;
+            
+            if (initiative.priority_level === 'high') highPriorityCount++;
+            if (initiative.priority_level === 'medium') mediumPriorityCount++;
+            if (initiative.priority_level === 'low') lowPriorityCount++;
+            if (initiative.status === 'blocked') blockedCount++;
+            
+            if (initiative.tentative_delivery_date && new Date(initiative.tentative_delivery_date) < now) {
+              overdueCount++;
+            }
+            
+            const healthStatus = initiative.execution_signals?.[0]?.health_status;
+            if (healthStatus === 'red') redHealthCount++;
+            if (healthStatus === 'amber') amberHealthCount++;
+          } else if (initiative?.status === 'delivered') {
+            completedInitiatives++;
+          }
+
+          return {
+            id: alloc.id,
+            initiativeId: initiative?.id || '',
+            title: initiative?.title || 'Unknown',
+            status: initiative?.status || 'unknown',
+            priority_level: initiative?.priority_level || 'medium',
+            complexity,
+            role: alloc.role,
+            allocatedHoursPerWeek: alloc.allocated_hours_per_week,
+            effectiveLoad,
+            startDate: alloc.start_date,
+            endDate: alloc.end_date,
+            tentative_delivery_date: initiative?.tentative_delivery_date,
+            health_status: initiative?.execution_signals?.[0]?.health_status || null,
+            product_name: initiative?.products?.name || null,
+          };
+        });
+
+        const utilizationPercentage = (totalEffectiveLoad / weeklyCapacity) * 100;
+        
         let workloadCategory: 'healthy' | 'warning' | 'overloaded' = 'healthy';
-        if (workloadScore >= 9) {
+        if (utilizationPercentage > 90) {
           workloadCategory = 'overloaded';
-        } else if (workloadScore >= 5) {
+        } else if (utilizationPercentage > 70) {
           workloadCategory = 'warning';
         }
 
-        return {
+        workloadData.push({
           id: person.id,
           fullName: person.full_name,
           department: person.department,
           roleTitle: person.role_title,
-          totalInitiatives: uniqueInitiatives.length,
-          activeInitiatives: activeInitiatives.length,
-          completedInitiatives: completedInitiatives.length,
+          totalAllocatedHours,
+          effectiveLoad: totalEffectiveLoad,
+          utilizationPercentage,
+          workloadCategory,
+          activeInitiatives,
+          completedInitiatives,
           highPriorityCount,
           mediumPriorityCount,
           lowPriorityCount,
@@ -131,16 +212,11 @@ export function useDelegation() {
           overdueCount,
           redHealthCount,
           amberHealthCount,
-          workloadScore,
-          workloadCategory,
-          initiatives: uniqueInitiatives,
-        };
-      });
+          allocations: processedAllocations,
+        });
+      }
 
-      // Filter to only people with at least one initiative
-      const filteredData = workloadData.filter(p => p.totalInitiatives > 0);
-
-      return filteredData;
+      return workloadData;
     },
   });
 }

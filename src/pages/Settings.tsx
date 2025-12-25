@@ -2,6 +2,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { CapacitySettings } from '@/components/settings/CapacitySettings';
 
 export default function Settings() {
   const { user, userRole, isAdmin } = useAuth();
@@ -56,7 +57,7 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Version</p>
-                <p>1.0.0 (Phase 1)</p>
+                <p>1.1.0 (Resource Allocation)</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Features</p>
@@ -65,20 +66,15 @@ export default function Settings() {
                   <Badge variant="secondary">Initiatives</Badge>
                   <Badge variant="secondary">Execution Signals</Badge>
                   <Badge variant="secondary">Dashboard</Badge>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Coming Soon</p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <Badge variant="outline">Monthly Delivery</Badge>
-                  <Badge variant="outline">People Contributions</Badge>
-                  <Badge variant="outline">Gmail Integration</Badge>
-                  <Badge variant="outline">Jira Integration</Badge>
+                  <Badge variant="secondary">Resource Allocation</Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Capacity Settings - Admin only */}
+        <CapacitySettings />
       </div>
     </AppLayout>
   );
