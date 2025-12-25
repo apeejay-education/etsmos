@@ -48,10 +48,19 @@ export function useCreateExecutionSignal() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (signal: Omit<ExecutionSignal, 'id' | 'created_at' | 'updated_at' | 'initiatives'>) => {
+    mutationFn: async (signal: Partial<Omit<ExecutionSignal, 'id' | 'created_at' | 'updated_at' | 'initiatives'>> & { initiative_id: string }) => {
       const { data, error } = await supabase
         .from('execution_signals')
-        .insert(signal)
+        .insert({
+          initiative_id: signal.initiative_id,
+          health_status: signal.health_status || 'green',
+          execution_stage: signal.execution_stage || 'not_started',
+          risk_blocker_summary: signal.risk_blocker_summary || null,
+          jira_epics: signal.jira_epics || null,
+          last_jira_activity: signal.last_jira_activity || null,
+          last_management_touch: signal.last_management_touch || null,
+          next_expected_movement: signal.next_expected_movement || null
+        })
         .select()
         .single();
       
