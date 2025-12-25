@@ -3,8 +3,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Initiative } from '@/types/database';
 import { InitiativePermissions } from '@/hooks/useInitiativePermissions';
-import { InitiativeChat } from './InitiativeChat';
-import { useCurrentPersonContribution } from '@/hooks/useInitiativeAccess';
 import { Calendar, Target, User, Shield, FileText } from 'lucide-react';
 
 interface InitiativeOverviewTabProps {
@@ -13,8 +11,6 @@ interface InitiativeOverviewTabProps {
 }
 
 export function InitiativeOverviewTab({ initiative, permissions }: InitiativeOverviewTabProps) {
-  const { data: personData } = useCurrentPersonContribution(initiative.id);
-  
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
@@ -80,22 +76,6 @@ export function InitiativeOverviewTab({ initiative, permissions }: InitiativeOve
           </Card>
         )}
 
-        {/* Chat Section */}
-        {permissions.canAccessChat && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Team Chat</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <InitiativeChat 
-                initiativeId={initiative.id}
-                personId={personData?.personId || null}
-                personName={personData?.personName || null}
-                canSendMessages={permissions.canAccessChat}
-              />
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Sidebar */}

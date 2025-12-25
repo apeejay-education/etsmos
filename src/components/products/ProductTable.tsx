@@ -1,7 +1,7 @@
 import { Product, ProductType, ProductLifecycle, PriorityLevel } from '@/types/database';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Users } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ interface ProductTableProps {
   onEdit: (product: Product) => void;
   onDelete: (id: string) => void;
   onUpdate: (id: string, field: string, value: string | boolean) => void;
+  onManageLeads?: (product: Product) => void;
   canEdit: boolean;
   isAdmin: boolean;
 }
@@ -66,7 +67,7 @@ const priorityOptions = [
   { value: 'low', label: 'Low' },
 ];
 
-export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, isAdmin }: ProductTableProps) {
+export function ProductTable({ products, onEdit, onDelete, onUpdate, onManageLeads, canEdit, isAdmin }: ProductTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -79,7 +80,7 @@ export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, is
             <TableHead>Business Owner</TableHead>
             <TableHead>Tech Owner</TableHead>
             <TableHead>Status</TableHead>
-            {isAdmin && <TableHead className="w-16">Actions</TableHead>}
+            {(isAdmin || onManageLeads) && <TableHead className="w-24">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -167,15 +168,29 @@ export function ProductTable({ products, onEdit, onDelete, onUpdate, canEdit, is
                   {product.is_active ? 'Active' : 'Inactive'}
                 </Badge>
               </TableCell>
-              {isAdmin && (
+              {(isAdmin || onManageLeads) && (
                 <TableCell>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => onDelete(product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    {onManageLeads && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => onManageLeads(product)}
+                        title="Manage Product Leads"
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => onDelete(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               )}
             </TableRow>
