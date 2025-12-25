@@ -8,7 +8,8 @@ import {
   LogOut,
   Calendar,
   Users,
-  ClipboardList
+  ClipboardList,
+  UserCog
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Initiatives', href: '/initiatives', icon: Target },
+  { name: 'Delegation', href: '/delegation', icon: UserCog },
   { name: 'Execution Signals', href: '/signals', icon: Activity },
   { name: 'Monthly Snapshots', href: '/snapshots', icon: Calendar },
   { name: 'People', href: '/people', icon: Users },
