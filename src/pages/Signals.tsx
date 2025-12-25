@@ -6,10 +6,26 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil } from 'lucide-react';
+import { Plus, Pencil, LayoutGrid, List } from 'lucide-react';
 import { ExecutionSignalDialog } from '@/components/signals/ExecutionSignalDialog';
 import { ExecutionSignal, HealthStatus, ExecutionStage } from '@/types/database';
 import { formatDistanceToNow } from 'date-fns';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { InlineEditCell } from '@/components/ui/inline-edit-cell';
+
+const healthOptions = [
+  { value: 'green', label: 'Green' },
+  { value: 'amber', label: 'Amber' },
+  { value: 'red', label: 'Red' },
+];
+
+const stageOptions = [
+  { value: 'not_started', label: 'Not Started' },
+  { value: 'active', label: 'Active' },
+  { value: 'paused', label: 'Paused' },
+  { value: 'completed', label: 'Completed' },
+];
+
 export default function Signals() {
   const {
     data: signals,
@@ -19,16 +35,19 @@ export default function Signals() {
     data: initiatives
   } = useInitiatives();
   const {
-    canEdit
+    canEdit,
+    isAdmin
   } = useAuth();
   const createSignal = useCreateExecutionSignal();
   const updateSignal = useUpdateExecutionSignal();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSignal, setEditingSignal] = useState<ExecutionSignal | null>(null);
   const [selectedInitiativeId, setSelectedInitiativeId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   // Get initiatives without signals
   const initiativesWithoutSignals = initiatives?.filter(i => !signals?.find(s => s.initiative_id === i.id) && i.status !== 'delivered' && i.status !== 'dropped') || [];
+  
   const handleCreate = (data: Omit<ExecutionSignal, 'id' | 'created_at' | 'updated_at' | 'initiatives'>) => {
     createSignal.mutate(data, {
       onSuccess: () => {
@@ -37,6 +56,7 @@ export default function Signals() {
       }
     });
   };
+  
   const handleUpdate = (data: Omit<ExecutionSignal, 'id' | 'created_at' | 'updated_at' | 'initiatives'>) => {
     if (!editingSignal) return;
     updateSignal.mutate({
@@ -49,17 +69,27 @@ export default function Signals() {
       }
     });
   };
+
+  const handleInlineUpdate = (signalId: string, field: string, value: string) => {
+    updateSignal.mutate({
+      id: signalId,
+      [field]: value
+    });
+  };
+
   const healthColors: Record<HealthStatus, string> = {
     green: 'bg-green-100 text-green-800 border-green-300',
     amber: 'bg-yellow-100 text-yellow-800 border-yellow-300',
     red: 'bg-red-100 text-red-800 border-red-300'
   };
+
   const stageLabels: Record<ExecutionStage, string> = {
     not_started: 'Not Started',
     active: 'Active',
     paused: 'Paused',
     completed: 'Completed'
   };
+
   if (isLoading) {
     return <AppLayout>
         <div className="animate-pulse space-y-6">
@@ -70,6 +100,7 @@ export default function Signals() {
         </div>
       </AppLayout>;
   }
+
   return <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -78,6 +109,24 @@ export default function Signals() {
             <p className="text-muted-foreground">
               Monitor execution health across initiatives
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'card' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('card')}
+              title="Card View"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setViewMode('list')}
+              title="List View"
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
@@ -107,7 +156,95 @@ export default function Signals() {
                 No execution signals yet. Add signals to track initiative health.
               </p>
             </CardContent>
-          </Card> : <div className="space-y-4">
+          </Card> : viewMode === 'list' ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Initiative</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Health</TableHead>
+                    <TableHead>Stage</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Risks / Blockers</TableHead>
+                    <TableHead>Last Touch</TableHead>
+                    <TableHead>Next Movement</TableHead>
+                    {canEdit && <TableHead className="w-[50px]"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {signals?.map(signal => (
+                    <TableRow key={signal.id}>
+                      <TableCell className="font-medium">{signal.initiatives?.title}</TableCell>
+                      <TableCell className="text-muted-foreground">{signal.initiatives?.products?.name}</TableCell>
+                      <TableCell>
+                        <InlineEditCell
+                          value={signal.health_status}
+                          onSave={(val) => handleInlineUpdate(signal.id, 'health_status', val)}
+                          type="select"
+                          options={healthOptions}
+                          canEdit={canEdit || isAdmin}
+                          displayValue={
+                            <Badge className={healthColors[signal.health_status]}>
+                              {signal.health_status.toUpperCase()}
+                            </Badge>
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <InlineEditCell
+                          value={signal.execution_stage}
+                          onSave={(val) => handleInlineUpdate(signal.id, 'execution_stage', val)}
+                          type="select"
+                          options={stageOptions}
+                          canEdit={canEdit || isAdmin}
+                          displayValue={stageLabels[signal.execution_stage]}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {signal.initiatives?.priority_level && (
+                          <Badge variant={signal.initiatives.priority_level === 'high' ? 'destructive' : 'secondary'}>
+                            {signal.initiatives.priority_level}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        <InlineEditCell
+                          value={signal.risk_blocker_summary || ''}
+                          onSave={(val) => handleInlineUpdate(signal.id, 'risk_blocker_summary', val)}
+                          type="text"
+                          canEdit={canEdit || isAdmin}
+                          placeholder="-"
+                          className="truncate block"
+                        />
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {signal.last_management_touch 
+                          ? formatDistanceToNow(new Date(signal.last_management_touch)) + ' ago'
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {signal.next_expected_movement 
+                          ? new Date(signal.next_expected_movement).toLocaleDateString()
+                          : '-'}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            setEditingSignal(signal);
+                            setDialogOpen(true);
+                          }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="space-y-4">
             {signals?.map(signal => <Card key={signal.id} className={`border-l-4 ${signal.health_status === 'red' ? 'border-l-red-500' : signal.health_status === 'amber' ? 'border-l-yellow-500' : 'border-l-green-500'}`}>
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
@@ -133,9 +270,9 @@ export default function Signals() {
                           </Badge>}
                       </div>
 
-                      {signal.risk_blocker_summary && <div className="mt-3 p-3 rounded-lg text-secondary-foreground bg-[sidebar-primary-foreground] bg-red-100">
+                      {signal.risk_blocker_summary && <div className="mt-3 p-3 rounded-lg text-secondary-foreground bg-destructive/10">
                           <p className="text-sm font-medium">Risks / Blockers</p>
-                          <p className="text-sm text-slate-700">
+                          <p className="text-sm text-muted-foreground">
                             {signal.risk_blocker_summary}
                           </p>
                         </div>}
@@ -158,7 +295,8 @@ export default function Signals() {
                   </div>
                 </CardContent>
               </Card>)}
-          </div>}
+          </div>
+          )}
 
         <ExecutionSignalDialog open={dialogOpen} onOpenChange={open => {
         setDialogOpen(open);
