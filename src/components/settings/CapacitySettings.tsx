@@ -12,8 +12,6 @@ export function CapacitySettings() {
     weekly_capacity_hours: number;
     role_multiplier_lead: number;
     role_multiplier_contributor: number;
-    role_multiplier_reviewer: number;
-    role_multiplier_advisor: number;
     complexity_low: number;
     complexity_medium: number;
     complexity_high: number;
@@ -25,8 +23,6 @@ export function CapacitySettings() {
       weekly_capacity_hours: settings.weekly_capacity_hours,
       role_multiplier_lead: settings.role_multiplier_lead,
       role_multiplier_contributor: settings.role_multiplier_contributor,
-      role_multiplier_reviewer: settings.role_multiplier_reviewer,
-      role_multiplier_advisor: settings.role_multiplier_advisor,
       complexity_low: settings.complexity_low,
       complexity_medium: settings.complexity_medium,
       complexity_high: settings.complexity_high,
@@ -86,7 +82,7 @@ export function CapacitySettings() {
           <p className="text-xs text-muted-foreground mb-2">
             Multipliers applied to allocated hours based on role responsibility level.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="mult_lead">Lead</Label>
               <Input
@@ -109,30 +105,6 @@ export function CapacitySettings() {
                 max="5"
                 value={formData.role_multiplier_contributor}
                 onChange={(e) => setFormData({ ...formData, role_multiplier_contributor: parseFloat(e.target.value) || 1.0 })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="mult_reviewer">Reviewer</Label>
-              <Input
-                id="mult_reviewer"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="5"
-                value={formData.role_multiplier_reviewer}
-                onChange={(e) => setFormData({ ...formData, role_multiplier_reviewer: parseFloat(e.target.value) || 0.6 })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="mult_advisor">Advisor</Label>
-              <Input
-                id="mult_advisor"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="5"
-                value={formData.role_multiplier_advisor}
-                onChange={(e) => setFormData({ ...formData, role_multiplier_advisor: parseFloat(e.target.value) || 0.3 })}
               />
             </div>
           </div>
