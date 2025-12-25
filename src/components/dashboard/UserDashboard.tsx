@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useUserDashboard } from '@/hooks/useUserDashboard';
+import { useReviewQueue } from '@/hooks/useReviewQueue';
 import { PasswordResetPrompt } from '@/components/auth/PasswordResetPrompt';
 import { format, differenceInDays } from 'date-fns';
-import { Calendar, CheckCircle, Clock, AlertTriangle, TrendingUp, Briefcase } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, AlertTriangle, TrendingUp, Briefcase, ClipboardCheck } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   approved: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
@@ -48,6 +49,8 @@ export function UserDashboard() {
     upcomingDeadlines,
     isLoading,
   } = useUserDashboard();
+  
+  const { data: reviewQueue = [] } = useReviewQueue();
 
   if (isLoading) {
     return (
@@ -220,6 +223,40 @@ export function UserDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Review Queue - only show if user has items to review */}
+        {reviewQueue.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ClipboardCheck className="w-5 h-5" />
+                Items Needing Your Review
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {reviewQueue.map(item => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{item.initiative_title}</p>
+                      <p className="text-xs text-muted-foreground">{item.product_name}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {item.pending_updates_count > 0 && (
+                        <Badge variant="secondary">
+                          {item.pending_updates_count} pending
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className={priorityColors[item.priority_level]}>
+                        {item.priority_level}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* My Contributions */}
         <Card>

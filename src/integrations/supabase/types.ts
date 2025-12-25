@@ -199,6 +199,63 @@ export type Database = {
           },
         ]
       }
+      initiative_updates: {
+        Row: {
+          content: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          initiative_id: string
+          person_id: string
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          title: string | null
+          update_status: Database["public"]["Enums"]["update_status"] | null
+          update_type: Database["public"]["Enums"]["update_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          initiative_id: string
+          person_id: string
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          title?: string | null
+          update_status?: Database["public"]["Enums"]["update_status"] | null
+          update_type: Database["public"]["Enums"]["update_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          initiative_id?: string
+          person_id?: string
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          title?: string | null
+          update_status?: Database["public"]["Enums"]["update_status"] | null
+          update_type?: Database["public"]["Enums"]["update_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_updates_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_updates_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       initiatives: {
         Row: {
           accountable_owner: string | null
@@ -525,6 +582,8 @@ export type Database = {
         | "operations"
         | "quality"
         | "brand"
+      update_status: "open" | "completed" | "blocked"
+      update_type: "update" | "review" | "closure" | "comment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -690,6 +749,8 @@ export const Constants = {
         "quality",
         "brand",
       ],
+      update_status: ["open", "completed", "blocked"],
+      update_type: ["update", "review", "closure", "comment"],
     },
   },
 } as const
