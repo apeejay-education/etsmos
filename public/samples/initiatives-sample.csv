@@ -1,4 +1,4 @@
-title,product_name,context,expected_outcome,approval_source,approval_date,status,priority_level,sensitivity_level,target_delivery_window,strategic_category,accountable_owner,escalation_owner
-Launch Mobile App,Digital Onboarding,Expand reach to mobile users,50% increase in mobile signups,board,2024-01-15,in_progress,high,internal,quarter,revenue,John Smith,Sarah Brown
-API Integration,Internal Analytics,Connect with third-party tools,Seamless data flow,management,2024-02-01,approved,medium,routine,month,operations,Alice Johnson,Tom Harris
-Security Audit,Client Portal,Compliance requirement,SOC2 certification,chairman,2024-01-20,blocked,high,confidential,immediate,compliance,Bob Wilson,Jane Doe
+title,product_name,status,priority_level,sensitivity_level,strategic_category,context,expected_outcome,accountable_owner,escalation_owner,approval_source,approval_date,target_delivery_window
+Launch Mobile App,Digital Onboarding,in_progress,high,internal,revenue,Expand reach to mobile users,50% increase in mobile signups,John Smith,Sarah Brown,board,2024-01-15,quarter
+API Integration,Internal Analytics,approved,medium,routine,operations,Connect with third-party tools,Seamless data flow,Alice Johnson,Tom Harris,management,2024-02-01,month
+Security Audit,Client Portal,blocked,high,confidential,compliance,Compliance requirement,SOC2 certification,Bob Wilson,Jane Doe,chairman,2024-01-20,immediate

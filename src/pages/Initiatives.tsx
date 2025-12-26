@@ -684,7 +684,7 @@ export default function Initiatives() {
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
           title="Import Initiatives"
-          description="Upload a CSV file to import multiple initiatives at once. The CSV should have columns: title, product_name (must match existing product), context, expected_outcome, approval_source, approval_date, status, priority_level, sensitivity_level, target_delivery_window, strategic_category, accountable_owner, escalation_owner."
+          description="Upload a CSV file to bulk import initiatives. Required columns: title, product_name (must match existing product). Core Details: status, priority_level, sensitivity_level, strategic_category, context, expected_outcome, accountable_owner, escalation_owner. Approval & Delivery: approval_source, approval_date, target_delivery_window."
           sampleCsvContent={INITIATIVES_SAMPLE_CSV}
           sampleFileName="initiatives-sample.csv"
           onImport={handleImportInitiatives}
